@@ -1,4 +1,8 @@
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
 #include <GL/glut.h>
+#endif
 #include <math.h>
 
 #define PI  3.1415926535
