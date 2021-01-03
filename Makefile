@@ -1,6 +1,16 @@
+# Get the operating system
+UNAME := $(shell uname)
+
 APP_NAME = raystorm
-LIBS = -lGL -lGLU -lglut
 FLAGS = -O0
+LIBS =
+
+# In case we compile on macos (Darwin is the name) we needs to set the openssl dir
+ifeq ($(UNAME), Darwin)
+LIBS += -framework GLUT -framework OpenGL -framework Cocoa
+else
+LIBS += -lGL -lGLU -lglut
+endif
 
 all: $(APP_NAME)
 
