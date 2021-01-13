@@ -5,14 +5,27 @@
 #endif
 #include <math.h>
 
-#define PI  3.1415926535
+#define PI  3.1415926535f
 #define P2  PI / 2
 #define P3  3 * PI/2
-#define DR 0.0174533    // one degree in radians
+#define DR  0.0174533f    // one degree in radians
+
+struct button_keys_t {
+    int w;
+    int a;
+    int d;
+    int s;
+};
+
 
 static float px, py;    // player pos
 static float pdx, pdy;  // player delta
 static float pa;        // player angle
+static button_keys_t global_keys;
+static float frame_1;
+static float frame_2;
+static float fps;
+
 
 void draw_player() {
     glColor3f(1, 1, 0);
@@ -297,7 +310,57 @@ void draw_rays_2d() {
 }
 
 
+void process_input() {
+
+    const float delta = 0.2 * fps;
+
+    if (global_keys.w == 1) {
+        px += pdx;
+        py += pdy;
+    }
+
+    if (global_keys.s == 1) {
+        px -= pdx;
+        py -= pdy;
+    }
+
+    if (global_keys.a == 1) {
+
+        pa -= 0.1;
+
+        if (pa < 0) {
+            pa += 2 * PI;
+        }
+
+        pdx = cos(pa) * delta;
+        pdy = sin(pa) * delta;
+    }
+
+    if (global_keys.d == 1) {
+
+        pa += 0.1;
+
+        if (pa > 2 * PI) {
+            pa -= 2 * PI;
+        }
+
+        pdx = cos(pa) * delta;
+        pdy = sin(pa) * delta;
+    }
+
+    glutPostRedisplay();
+}
+
+
 void display() {
+    // Get the fps
+    frame_2 = glutGet(GLUT_ELAPSED_TIME);
+    fps = frame_2 - frame_1;
+    frame_1 = glutGet(GLUT_ELAPSED_TIME);
+
+    // Check the keyboard
+    process_input();
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     draw_map_2d();
     draw_rays_2d();
@@ -306,47 +369,54 @@ void display() {
 }
 
 
-void buttons(unsigned char key, int x, int y) {
+void button_down(const unsigned char key, int x, int y) {
     switch (key) {
-    case 'w':
-        px += pdx;
-        py += pdy;
-        break;
-
-    case 's':
-        px -= pdx;
-        py -= pdy;
-        break;
-
     case 'a':
-        pa -= 0.1;
-
-        if (pa < 0) {
-            pa += 2 * PI;
-        }
-
-        pdx = cos(pa) * 5;
-        pdy = sin(pa) * 5;
-
+        global_keys.a = 1;
         break;
 
     case 'd':
-        pa += 0.1;
-
-        if (pa > 2 * PI) {
-            pa -= 2 * PI;
-        }
-
-        pdx = cos(pa) * 5;
-        pdy = sin(pa) * 5;
-
+        global_keys.d = 1;
         break;
 
-    default:
+    case 'w':
+        global_keys.w = 1;
+        break;
+
+    case 's':
+        global_keys.s = 1;
         break;
     }
 
     glutPostRedisplay();
+}
+
+
+void button_up(const unsigned char key, int x, int y) {
+    switch (key) {
+    case 'a':
+        global_keys.a = 0;
+        break;
+
+    case 'd':
+        global_keys.d = 0;
+        break;
+
+    case 'w':
+        global_keys.w = 0;
+        break;
+
+    case 's':
+        global_keys.s = 0;
+        break;
+    }
+
+    glutPostRedisplay();
+}
+
+
+void resize(const int w, const int h) {
+    glutReshapeWindow(1024, 512);
 }
 
 
@@ -363,12 +433,15 @@ int main(int argc, char **argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(1024, 512);
+    glutInitWindowPosition(200, 200);
     glutCreateWindow("RAY STORM");
 
     init();
 
     glutDisplayFunc(display);
-    glutKeyboardFunc(buttons);
+    glutReshapeFunc(resize);
+    glutKeyboardFunc(button_down);
+    glutKeyboardUpFunc(button_up);
 
     glutMainLoop();
 
