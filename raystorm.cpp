@@ -311,17 +311,55 @@ void draw_rays_2d() {
 
 
 void process_input() {
+    ////////// Collision
+    // Offset
+    int x0 = 0;
 
+    if (pdx < 0) {
+        x0 = -20;
+    } else {
+        x0 = 20;
+    }
+
+    int y0 = 0;
+
+    if (pdy < 0) {
+        y0 = -20;
+    } else {
+        y0 = 20;
+    }
+
+    // Calculate the offset postion
+    int ipx = px / 64.0f;
+    int ipx_add_x0 = (px + x0) / 64.0f;
+    int ipx_sub_x0 = (px - x0) / 64.0f;
+    int ipy = py / 64.0f;
+    int ipy_add_y0 = (py + y0) / 64.0f;
+    int ipy_sub_y0 = (py - y0) / 64.0f;
+
+    ////////// Update the pos
     const float delta = 0.2 * fps;
 
     if (global_keys.w == 1) {
-        px += pdx;
-        py += pdy;
+
+        if (map[ipy * map_x + ipx_add_x0] == 0) {
+            px += pdx;
+        }
+
+        if (map[ipy_add_y0 * map_x + ipx] == 0) {
+            py += pdy;
+        }
     }
 
     if (global_keys.s == 1) {
-        px -= pdx;
-        py -= pdy;
+
+        if (map[ipy * map_x + ipx_sub_x0] == 0) {
+            px -= pdx;
+        }
+
+        if (map[ipy_sub_y0 * map_x + ipx] == 0) {
+            py -= pdy;
+        }
     }
 
     if (global_keys.a == 1) {
