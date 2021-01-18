@@ -393,6 +393,8 @@ void draw_rays_2d() {
 
         // ----------- DRAW -----------
 
+        float shade = 1.0f;
+
         // Set the ray to the shorter
         if (dist_v < dist_h) {
             rx = vx;
@@ -402,6 +404,7 @@ void draw_rays_2d() {
         }
 
         if (dist_h < dist_v) {
+            shade = 0.5f;
             rx = hx;
             ry = hy;
             dist_t = dist_h;
@@ -430,14 +433,17 @@ void draw_rays_2d() {
 
         float line_h = (tile_size * 320) / dist_t;      // Line height
 
+        float ty_step = 32.0 / (float)line_h;
+        float ty_off = 0;
+
         if (line_h > 320) {
+            ty_off = (line_h - 320) / 2.0f;
             line_h = 320;
         }
 
         float line_o = 160 - line_h / 2;                // Line offset
 
-        float ty = 0;
-        float ty_step = 32.0 / (float)line_h;
+        float ty = ty_off * ty_step;
 
         for (int y = 0; y < line_h; ++y) {
             // Draw vertical walls
@@ -456,7 +462,7 @@ void draw_rays_2d() {
             // glVertex2i(l + 4, line_h + line_o);
             // glEnd();
 
-            float c = all_textures[(int)(ty) * 32];
+            float c = (all_textures[(int)(ty) * 32]) * shade;
             glColor3f(c, c, c);
             glPointSize(8);
             glBegin(GL_POINTS);
