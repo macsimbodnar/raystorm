@@ -253,7 +253,7 @@ float dist(float ax, float ay, float bx, float by, float angle) {
 
 void draw_rays_2d() {
     // Top
-    glColor3f(0.3, 0.3, 0.3);
+    glColor3f(0.5, 0.1, 0.01);
     glBegin(GL_QUADS);
     glVertex2i(526,  0);
     glVertex2i(1006,  0);
@@ -261,7 +261,7 @@ void draw_rays_2d() {
     glVertex2i(526, 160);
     glEnd();
     // Bottom
-    glColor3f(0, 0, 1);
+    glColor3f(0.8, 0.6, 0.4);
     glBegin(GL_QUADS);
     glVertex2i(526, 160);
     glVertex2i(1006, 160);
@@ -443,7 +443,8 @@ void draw_rays_2d() {
 
         float line_o = 160 - line_h / 2;                // Line offset
 
-        float ty = ty_off * ty_step;
+        float ty = ty_off * ty_step;                    // Texture Y value
+        float tx = (int)(rx / 2.0f) % 32;               // Texture X value
 
         for (int y = 0; y < line_h; ++y) {
             // Draw vertical walls
