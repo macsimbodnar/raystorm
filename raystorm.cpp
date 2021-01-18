@@ -158,6 +158,7 @@ int all_textures [] = {
 };
 // *INDENT-ON*
 
+
 #define PI  3.1415926535f
 #define P2  PI / 2
 #define P3  3 * PI/2
@@ -252,7 +253,7 @@ float dist(float ax, float ay, float bx, float by, float angle) {
 
 void draw_rays_2d() {
     // Top
-    glColor3f(0, 0, 0);
+    glColor3f(0.3, 0.3, 0.3);
     glBegin(GL_QUADS);
     glVertex2i(526,  0);
     glVertex2i(1006,  0);
@@ -435,19 +436,34 @@ void draw_rays_2d() {
 
         float line_o = 160 - line_h / 2;                // Line offset
 
-        // Have to split in 2 because on my machine the max line width is less then 8
-        glLineWidth(4);
-        glBegin(GL_LINES);
-        int l = r * 8 + 530 - 2;
-        glVertex2i(l, line_o);
-        glVertex2i(l, line_h + line_o);
-        glEnd();
+        float ty = 0;
+        float ty_step = 32.0 / (float)line_h;
 
-        glLineWidth(4);
-        glBegin(GL_LINES);
-        glVertex2i(l + 4, line_o);
-        glVertex2i(l + 4, line_h + line_o);
-        glEnd();
+        for (int y = 0; y < line_h; ++y) {
+            // Draw vertical walls
+
+            // Have to split in 2 because on my machine the max line width is less then 8
+            // glLineWidth(4);
+            // glBegin(GL_LINES);
+            // int l = r * 8 + 530 - 2;
+            // glVertex2i(l, line_o);
+            // glVertex2i(l, line_h + line_o);
+            // glEnd();
+
+            // glLineWidth(4);
+            // glBegin(GL_LINES);
+            // glVertex2i(l + 4, line_o);
+            // glVertex2i(l + 4, line_h + line_o);
+            // glEnd();
+
+            float c = all_textures[(int)(ty) * 32];
+            glColor3f(c, c, c);
+            glPointSize(8);
+            glBegin(GL_POINTS);
+            glVertex2i(r * 8 + 530, y + line_o);
+            glEnd();
+            ty += ty_step;
+        }
 
         // Update the ray angle
         ra += DR;
