@@ -4,18 +4,19 @@
 #include <GL/glut.h>
 #endif
 #include <math.h>
+#include <iostream>
 
 // *INDENT-OFF*
 // Textures 32 x 32
 int all_textures [] = {
     // Checkerboard
     0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
-    0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
-    0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
-    0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
-    0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
-    0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
-    0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
+    0,0,0,1,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
+    0,0,1,1,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
+    0,1,1,1,1,1,1,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
+    0,1,1,1,1,1,1,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
+    0,0,1,1,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
+    0,0,0,1,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
     0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
 
     1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
@@ -253,7 +254,7 @@ float dist(float ax, float ay, float bx, float by, float angle) {
 
 void draw_rays_2d() {
     // Top
-    glColor3f(0.5, 0.1, 0.01);
+    glColor3f(0.5, 0.1, .0);
     glBegin(GL_QUADS);
     glVertex2i(526,  0);
     glVertex2i(1006,  0);
@@ -283,6 +284,9 @@ void draw_rays_2d() {
     }
 
     for (r = 0; r < 60; r++) {
+        int vmt = 0;        // Vertival 
+        int hmt = 0;
+
         // ----------- Horizontal lines -----------
         dof = 0;
         float a_tan =  -1 / tan(ra);
@@ -394,13 +398,14 @@ void draw_rays_2d() {
         // ----------- DRAW -----------
 
         float shade = 1.0f;
+        const float ray_r_color = 1.0f;
 
         // Set the ray to the shorter
         if (dist_v < dist_h) {
             rx = vx;
             ry = vy;
             dist_t = dist_v;
-            glColor3f(0.9, 0, 0);
+            glColor3f(ray_r_color, 0, 0);
         }
 
         if (dist_h < dist_v) {
@@ -408,7 +413,7 @@ void draw_rays_2d() {
             rx = hx;
             ry = hy;
             dist_t = dist_h;
-            glColor3f(0.6, 0, 0);
+            glColor3f(ray_r_color * shade, 0, 0);
         }
 
         // Draw 2D
@@ -444,7 +449,22 @@ void draw_rays_2d() {
         float line_o = 160 - line_h / 2;                // Line offset
 
         float ty = ty_off * ty_step;                    // Texture Y value
-        float tx = (int)(rx / 2.0f) % 32;               // Texture X value
+        float tx;                                       // Texture X value
+
+        if (shade == 1.0f) {   // Draw the textures in the wall in front and backward
+            tx = (int)(ry / 2.0f) % 32;
+
+            if (ra > P2 && ra < P3) {
+                tx = 31 - tx;
+            }
+        } else {            // Draw the textures in the left and right wall
+            tx = (int)(rx / 2.0f) % 32;
+
+            if (ra < PI) {
+                // Flip the texture if we looking backward
+                tx = 31 - tx;
+            }
+        }
 
         for (int y = 0; y < line_h; ++y) {
             // Draw vertical walls
@@ -463,7 +483,7 @@ void draw_rays_2d() {
             // glVertex2i(l + 4, line_h + line_o);
             // glEnd();
 
-            float c = (all_textures[(int)(ty) * 32]) * shade;
+            float c = all_textures[((int)(ty) * 32) + (int)tx] * shade;
             glColor3f(c, c, c);
             glPointSize(8);
             glBegin(GL_POINTS);
@@ -647,7 +667,7 @@ int main(int argc, char **argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(1024, 512);
-    glutInitWindowPosition(200, 200);
+    glutInitWindowPosition(300, 1200);
     glutCreateWindow("RAY STORM");
 
     init();
