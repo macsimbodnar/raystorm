@@ -165,6 +165,7 @@ int all_textures [] = {
 #define P3  3 * PI/2
 #define DR  0.0174533f    // one degree in radians
 
+
 struct button_keys_t {
     int w;
     int a;
@@ -199,6 +200,7 @@ void draw_player() {
 
 
 const static int map_x = 8, map_y = 8, tile_size = 64;
+
 int mapw[] = {                  // Map of walls
     2, 2, 2, 2, 2, 2, 2, 2,
     2, 0, 0, 0, 2, 0, 0, 2,
@@ -208,6 +210,28 @@ int mapw[] = {                  // Map of walls
     2, 0, 0, 0, 0, 1, 2, 2,
     2, 0, 0, 0, 0, 0, 0, 2,
     2, 2, 2, 2, 2, 2, 2, 2
+};
+
+int mapf[] = {                  // Map of floors
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+int mapc[] = {                  // Map of ceiling
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 
@@ -450,7 +474,7 @@ void draw_rays_2d() {
             line_h = 320;
         }
 
-        float line_o = 160 - line_h / 2;                // Line offset
+        float line_off = 160 - line_h / 2;              // Line offset
 
         float ty = ty_off * ty_step + hmt * 32;         // Texture Y value
         float tx;                                       // Texture X value
@@ -477,14 +501,14 @@ void draw_rays_2d() {
             // glLineWidth(4);
             // glBegin(GL_LINES);
             // int l = r * 8 + 530 - 2;
-            // glVertex2i(l, line_o);
-            // glVertex2i(l, line_h + line_o);
+            // glVertex2i(l, line_off);
+            // glVertex2i(l, line_h + line_off);
             // glEnd();
 
             // glLineWidth(4);
             // glBegin(GL_LINES);
-            // glVertex2i(l + 4, line_o);
-            // glVertex2i(l + 4, line_h + line_o);
+            // glVertex2i(l + 4, line_off);
+            // glVertex2i(l + 4, line_h + line_off);
             // glEnd();
 
             float c = all_textures[((int)(ty) * 32) + (int)tx] * shade;
@@ -502,9 +526,47 @@ void draw_rays_2d() {
 
             glPointSize(8);
             glBegin(GL_POINTS);
-            glVertex2i(r * 8 + 530, y + line_o);
+            glVertex2i(r * 8 + 530, y + line_off);
             glEnd();
             ty += ty_step;
+        }
+
+        for (int y = line_off + line_h; y < 320; ++y) {
+            // Draw floor
+            float dy = y - (320 / 2.0);
+            float angle = pa - ra;
+
+            if (angle < 0) {
+                angle += 2 * PI;
+            }
+
+            if (angle > 2 * PI) {
+                angle -= 2 * PI;
+            }
+
+            float ra_fix = cos(angle);
+
+            float tx = px / 2 + cos(ra) * 158 * 32 / dy / ra_fix;
+            float ty = py / 2 + sin(ra) * 158 * 32 / dy / ra_fix;
+
+            int mp = mapf[(int)(ty / 32.0) * map_x + (int)(tx / 32.0)] * 32 * 32;
+            float c = all_textures[((int)(ty) & 31) * 32 + ((int)(tx) & 31) + mp] * 0.7;
+
+            glColor3f(c / 1.3, c / 1.3, c);
+            glPointSize(8);
+            glBegin(GL_POINTS);
+            glVertex2i(r * 8 + 530, y);
+            glEnd();
+
+            // Draw ceiling
+            mp = mapc[(int)(ty / 32.0) * map_x + (int)(tx / 32.0)] * 32 * 32;
+            c = all_textures[((int)(ty) & 31) * 32 + ((int)(tx) & 31) + mp] * 0.7;
+
+            glColor3f(c / 2.0, c / 1.2, c / 2.0);
+            glPointSize(8);
+            glBegin(GL_POINTS);
+            glVertex2i(r * 8 + 530, 320 - y);
+            glEnd();
         }
 
         // Update the ray angle
@@ -690,6 +752,10 @@ void button_up(const unsigned char key, int x, int y) {
 
     case 's':
         global_keys.s = 0;
+        break;
+
+    case 'e':
+        global_keys.e = 0;
         break;
     }
 
