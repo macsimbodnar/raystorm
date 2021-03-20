@@ -198,15 +198,15 @@ void draw_player() {
 
 
 const static int map_x = 8, map_y = 8, tile_size = 64;
-int map[] = {
-    1, 1, 1, 1, 1, 1, 1, 1,
-    1, 0, 0, 1, 0, 0, 0, 1,
-    1, 0, 0, 1, 0, 0, 0, 1,
-    1, 0, 0, 1, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 1, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 1,
-    1, 1, 1, 1, 1, 1, 1, 1
+int walls_map[] = {
+    2, 2, 2, 2, 2, 4, 2, 2,
+    2, 0, 0, 2, 0, 0, 0, 2,
+    2, 0, 0, 2, 0, 0, 0, 2,
+    3, 0, 0, 2, 0, 0, 0, 3,
+    2, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 1, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 2,
+    2, 2, 2, 2, 2, 2, 2, 2
 };
 
 
@@ -216,7 +216,7 @@ void draw_map_2d() {
     for (y = 0; y < map_y; y++) {
         for (x = 0; x < map_x; x++) {
 
-            if (map[y * map_x + x] == 1) {
+            if (walls_map[y * map_x + x] > 0) {
                 //
                 glColor3f(1.0f, 1.0f, 1.0f);
             } else {
@@ -284,8 +284,8 @@ void draw_rays_2d() {
     }
 
     for (r = 0; r < 60; r++) {
-        int vmt = 0;        // Vertival 
-        int hmt = 0;
+        int vmt = 0;        // Vertival walls_map texture
+        int hmt = 0;        // Horizontal walls_map texture
 
         // ----------- Horizontal lines -----------
         dof = 0;
@@ -322,8 +322,9 @@ void draw_rays_2d() {
             my = (int) ry / 64;
             mp = my * map_x + mx;
 
-            if (mp > 0 && mp < map_x * map_y && map[mp] == 1) {
+            if (mp > 0 && mp < map_x * map_y && walls_map[mp] > 0) {
                 // Hit wall
+                hmt = walls_map[mp] - 1;
                 hx = rx;
                 hy = ry;
                 dist_h = dist(px, py, hx, hy, ra);
@@ -380,8 +381,9 @@ void draw_rays_2d() {
             my = (int) ry / 64;
             mp = my * map_x + mx;
 
-            if (mp > 0 && mp < map_x * map_y && map[mp] == 1) {
+            if (mp > 0 && mp < map_x * map_y && walls_map[mp] > 0) {
                 // Hit wall
+                vmt = walls_map[mp] - 1;
                 vx = rx;
                 vy = ry;
                 dist_v = dist(px, py, vx, vy, ra);
@@ -402,6 +404,7 @@ void draw_rays_2d() {
 
         // Set the ray to the shorter
         if (dist_v < dist_h) {
+            hmt = vmt;
             rx = vx;
             ry = vy;
             dist_t = dist_v;
@@ -448,7 +451,7 @@ void draw_rays_2d() {
 
         float line_o = 160 - line_h / 2;                // Line offset
 
-        float ty = ty_off * ty_step;                    // Texture Y value
+        float ty = ty_off * ty_step + hmt * 32;         // Texture Y value
         float tx;                                       // Texture X value
 
         if (shade == 1.0f) {   // Draw the textures in the wall in front and backward
@@ -538,22 +541,22 @@ void process_input() {
 
     if (global_keys.w == 1) {
 
-        if (map[ipy * map_x + ipx_add_x0] == 0) {
+        if (walls_map[ipy * map_x + ipx_add_x0] == 0) {
             px += pdx;
         }
 
-        if (map[ipy_add_y0 * map_x + ipx] == 0) {
+        if (walls_map[ipy_add_y0 * map_x + ipx] == 0) {
             py += pdy;
         }
     }
 
     if (global_keys.s == 1) {
 
-        if (map[ipy * map_x + ipx_sub_x0] == 0) {
+        if (walls_map[ipy * map_x + ipx_sub_x0] == 0) {
             px -= pdx;
         }
 
-        if (map[ipy_sub_y0 * map_x + ipx] == 0) {
+        if (walls_map[ipy_sub_y0 * map_x + ipx] == 0) {
             py -= pdy;
         }
     }
