@@ -170,6 +170,7 @@ struct button_keys_t {
     int a;
     int d;
     int s;
+    int e;
 };
 
 
@@ -198,13 +199,13 @@ void draw_player() {
 
 
 const static int map_x = 8, map_y = 8, tile_size = 64;
-int walls_map[] = {
-    2, 2, 2, 2, 2, 4, 2, 2,
-    2, 0, 0, 2, 0, 0, 0, 2,
-    2, 0, 0, 2, 0, 0, 0, 2,
-    3, 0, 0, 2, 0, 0, 0, 3,
+int mapw[] = {                  // Map of walls
+    2, 2, 2, 2, 2, 2, 2, 2,
+    2, 0, 0, 0, 2, 0, 0, 2,
+    2, 0, 0, 0, 2, 0, 0, 2,
+    2, 2, 4, 2, 2, 0, 0, 3,
     2, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 1, 0, 2,
+    2, 0, 0, 0, 0, 1, 2, 2,
     2, 0, 0, 0, 0, 0, 0, 2,
     2, 2, 2, 2, 2, 2, 2, 2
 };
@@ -216,7 +217,7 @@ void draw_map_2d() {
     for (y = 0; y < map_y; y++) {
         for (x = 0; x < map_x; x++) {
 
-            if (walls_map[y * map_x + x] > 0) {
+            if (mapw[y * map_x + x] > 0) {
                 //
                 glColor3f(1.0f, 1.0f, 1.0f);
             } else {
@@ -284,8 +285,8 @@ void draw_rays_2d() {
     }
 
     for (r = 0; r < 60; r++) {
-        int vmt = 0;        // Vertival walls_map texture
-        int hmt = 0;        // Horizontal walls_map texture
+        int vmt = 0;        // Vertival mapw texture
+        int hmt = 0;        // Horizontal mapw texture
 
         // ----------- Horizontal lines -----------
         dof = 0;
@@ -322,9 +323,9 @@ void draw_rays_2d() {
             my = (int) ry / 64;
             mp = my * map_x + mx;
 
-            if (mp > 0 && mp < map_x * map_y && walls_map[mp] > 0) {
+            if (mp > 0 && mp < map_x * map_y && mapw[mp] > 0) {
                 // Hit wall
-                hmt = walls_map[mp] - 1;
+                hmt = mapw[mp] - 1;
                 hx = rx;
                 hy = ry;
                 dist_h = dist(px, py, hx, hy, ra);
@@ -381,9 +382,9 @@ void draw_rays_2d() {
             my = (int) ry / 64;
             mp = my * map_x + mx;
 
-            if (mp > 0 && mp < map_x * map_y && walls_map[mp] > 0) {
+            if (mp > 0 && mp < map_x * map_y && mapw[mp] > 0) {
                 // Hit wall
-                vmt = walls_map[mp] - 1;
+                vmt = mapw[mp] - 1;
                 vx = rx;
                 vy = ry;
                 dist_v = dist(px, py, vx, vy, ra);
@@ -541,29 +542,29 @@ void process_input() {
 
     if (global_keys.w == 1) {
 
-        if (walls_map[ipy * map_x + ipx_add_x0] == 0) {
+        if (mapw[ipy * map_x + ipx_add_x0] == 0) {
             px += pdx;
         }
 
-        if (walls_map[ipy_add_y0 * map_x + ipx] == 0) {
+        if (mapw[ipy_add_y0 * map_x + ipx] == 0) {
             py += pdy;
         }
     }
 
     if (global_keys.s == 1) {
 
-        if (walls_map[ipy * map_x + ipx_sub_x0] == 0) {
+        if (mapw[ipy * map_x + ipx_sub_x0] == 0) {
             px -= pdx;
         }
 
-        if (walls_map[ipy_sub_y0 * map_x + ipx] == 0) {
+        if (mapw[ipy_sub_y0 * map_x + ipx] == 0) {
             py -= pdy;
         }
     }
 
     if (global_keys.a == 1) {
 
-        pa -= 0.1;
+        pa -= 0.03;
 
         if (pa < 0) {
             pa += 2 * PI;
@@ -575,7 +576,7 @@ void process_input() {
 
     if (global_keys.d == 1) {
 
-        pa += 0.1;
+        pa += 0.03;
 
         if (pa > 2 * PI) {
             pa -= 2 * PI;
@@ -583,6 +584,35 @@ void process_input() {
 
         pdx = cos(pa) * delta;
         pdy = sin(pa) * delta;
+    }
+
+    if (global_keys.e == 1) {
+        // Open doors
+        int x0 = 0;
+        int y0 = 0;
+
+        if (pdx < 0) {
+            x0 = -25;
+        } else {
+            x0 = 25;
+        }
+
+        if (pdy < 0) {
+            y0 = -25;
+        } else {
+            y0 = 25;
+        }
+
+        int ipx = px / 64.0;
+        int ipx_add_x0 = (px + x0) / 64.0;
+        int ipy = py / 64.0;
+        int ipy_add_y0 = (py + y0) / 64.0;
+
+        int tail = ipy_add_y0 * map_x + ipx_add_x0;
+
+        if (mapw[tail] == 4) {
+            mapw[tail] = 0;
+        }
     }
 
     glutPostRedisplay();
@@ -622,6 +652,10 @@ void button_down(const unsigned char key, int x, int y) {
 
     case 's':
         global_keys.s = 1;
+        break;
+
+    case 'e':
+        global_keys.e = 1;
         break;
     }
 
