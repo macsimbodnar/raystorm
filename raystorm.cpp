@@ -471,7 +471,7 @@ void draw_rays_2d() {
         }
 
         for (int y = 0; y < line_h; ++y) {
-            // Draw vertical walls
+            // Draw walls
 
             // Have to split in 2 because on my machine the max line width is less then 8
             // glLineWidth(4);
@@ -488,7 +488,18 @@ void draw_rays_2d() {
             // glEnd();
 
             float c = all_textures[((int)(ty) * 32) + (int)tx] * shade;
-            glColor3f(c, c, c);
+
+            // Set different colors for different walls
+            if (hmt == 0) {
+                glColor3f(c, c / 2.0, c / 2.0);   // Checkerboard red
+            } else if (hmt == 1) {
+                glColor3f(c, c, c / 2.0);  // Brick yellow
+            } else if (hmt == 2) {
+                glColor3f(c / 2.0, c / 2.0, c); // Window blue
+            } else if (hmt == 3) {
+                glColor3f(c / 2.0, c, c / 2.0); // Door green
+            }
+
             glPointSize(8);
             glBegin(GL_POINTS);
             glVertex2i(r * 8 + 530, y + line_o);
