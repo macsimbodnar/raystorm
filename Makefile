@@ -14,6 +14,9 @@ endif
 
 all: $(APP_NAME)
 
+run: $(APP_NAME)
+	./$(APP_NAME)
+
 $(APP_NAME): raystorm.cpp
 	$(CXX) $(FLAGS) raystorm.cpp -o $(APP_NAME) $(LIBS)
 
