@@ -77,16 +77,18 @@ void game_output_sound(game_state_t *game_state, game_sound_output_buffer_t *buf
 
 // void game_update_and_render(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)
 GAME_UPDATE_AND_RENDER(game_update_and_render) {
-    LOG_D("Update image");
+    
+    i32 half_height = buffer->height / 2;
+    rect_t top = {0, 0,  buffer->width, half_height + 1};
+    draw_rectangle(buffer, &top, 1.0f, .0f, .0f);
 
-    rect_t r = {0, 0, 100, 50};
-    draw_rectangle(buffer, &r, 1.0f, .0f, .0f);
+    rect_t bottom = {0, half_height,  buffer->width,  half_height};
+    draw_rectangle(buffer, &bottom, .0f, 1.0f, .0f);
 }
 
 
 // void game_get_sound_samples(game_memory_t *memory, game_sound_output_buffer_t *sound_buffer)
 GAME_GET_SOUND_SAMPLES(game_get_sound_samples) {
-    LOG_D("Update audio");
     game_state_t *game_state = (game_state_t *) memory->permanent_storage;
     game_output_sound(game_state, sound_buffer, 400);
 }
