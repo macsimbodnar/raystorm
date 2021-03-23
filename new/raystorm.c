@@ -1,18 +1,64 @@
+#include <math.h>
 #include "log.h"
 #include "raystorm.h"
 
+
 typedef struct {
-    // memory_arena worldArena;
-    // world *_world;
+    i32 x;
+    i32 y;
+    i32 width;
+    i32 height;
+} rect_t;
 
-    // tile_map_position cameraP;
-    // tile_map_position playerP;
-    // v2 dPlayerP;                 // first derivative (player velocity)
 
-    // loaded_bitmap backdrop;
-    // uint32 heroFacingDirection;
-    // hero_bitmaps heroBitmaps[4];
-} game_state_t;
+// internal i32 round_f32_to_i32(f32 r32) {
+//     i32 result = (i32) roundf(r32);
+//     return result;
+// }
+
+
+internal u32 round_f32_to_u32(f32 r32) {
+    u32 result = (u32) roundf(r32);
+    return result;
+}
+
+
+internal void draw_rectangle(game_offscreen_buffer_t *buffer, rect_t *rect, f32 R, f32 G, f32 B) {
+    i32 min_x = rect->x;
+    i32 min_y = rect->y;
+    i32 max_x = rect->x + rect->width;
+    i32 max_y = rect->y + rect->height;
+
+    if (min_x < 0) {
+        min_x = 0;
+    }
+
+    if (min_y < 0) {
+        min_y = 0;
+    }
+
+    if (max_x > buffer->width) {
+        max_x = buffer->width;
+    }
+
+    if (max_y > buffer->height) {
+        max_y = buffer->height;
+    }
+
+    u32 color = ((round_f32_to_u32(R * 255.0f) << 16) | (round_f32_to_u32(G * 255.0f) << 8) | (round_f32_to_u32(B * 255.0f) << 0));
+
+    u8 *row = (((u8 *) buffer->memory) + min_x * buffer->bytes_per_pixel + min_y * buffer->pitch);
+
+    for (int y = min_y; y < max_y; y++) {
+        u32 *pixel = (u32 *) row;
+
+        for (int x = min_x; x < max_x; x++) {
+            *pixel++ = color;
+        }
+
+        row += buffer->pitch;
+    }
+}
 
 
 void game_output_sound(game_state_t *game_state, game_sound_output_buffer_t *buffer, int tone_Hz) {
@@ -32,6 +78,9 @@ void game_output_sound(game_state_t *game_state, game_sound_output_buffer_t *buf
 // void game_update_and_render(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)
 GAME_UPDATE_AND_RENDER(game_update_and_render) {
     LOG_D("Update image");
+
+    rect_t r = {0, 0, 100, 50};
+    draw_rectangle(buffer, &r, 1.0f, .0f, .0f);
 }
 
 

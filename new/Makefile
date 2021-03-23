@@ -10,7 +10,7 @@ LIBS =
 ifeq ($(UNAME), Darwin)
 # LIBS += -framework GLUT -framework OpenGL -framework Cocoa
 else
-LIBS += -lSDL2
+LIBS += -lSDL2 -lm
 endif
 
 OBJS = raystorm.o
