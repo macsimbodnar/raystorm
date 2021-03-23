@@ -17,6 +17,9 @@ global_var int map_w[] = {                  // Map of walls
 global_var i32 g_map_width = 8;
 global_var i32 g_map_height = 8;
 global_var i32 g_tile_size = 64;
+global_var i32 g_player_x = 300;
+global_var i32 g_player_y = 300;
+global_var i32 g_player_half_thick = 10;
 
 typedef struct {
     i32 x;
@@ -106,17 +109,19 @@ internal void draw_map_2d(game_offscreen_buffer_t *buffer) {
 }
 
 
+internal void draw_player(game_offscreen_buffer_t *buffer) {
+    rect_t rec = {g_player_x - g_player_half_thick, g_player_y - g_player_half_thick, g_player_half_thick, g_player_half_thick};
+    draw_rectangle(buffer, &rec, 1.0f, .0f, .0f);
+}
+
+
 // void game_update_and_render(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)
 GAME_UPDATE_AND_RENDER(game_update_and_render) {
     rect_t top = {0, 0,  buffer->width, buffer->height};
-    draw_rectangle(buffer, &top, .3f, .3f, .3f);
-
-
-    // rect_t top2 = {10, 10,  10, 10};
-    // draw_rectangle(buffer, &top2, .3f, .0f, .3f);
-
+    draw_rectangle(buffer, &top, .3f, .0f, .3f);
 
     draw_map_2d(buffer);
+    draw_player(buffer);
 }
 
 
