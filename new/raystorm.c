@@ -3,6 +3,21 @@
 #include "raystorm.h"
 
 
+global_var int map_w[] = {                  // Map of walls
+    2, 2, 2, 2, 2, 2, 2, 2,
+    2, 0, 0, 0, 2, 0, 0, 2,
+    2, 0, 0, 0, 2, 0, 0, 2,
+    2, 2, 4, 2, 2, 0, 0, 3,
+    2, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 1, 2, 2,
+    2, 0, 0, 0, 0, 0, 0, 2,
+    2, 2, 2, 2, 2, 2, 2, 2
+};
+
+global_var i32 g_map_width = 8;
+global_var i32 g_map_height = 8;
+global_var i32 g_tile_size = 64;
+
 typedef struct {
     i32 x;
     i32 y;
@@ -61,6 +76,50 @@ internal void draw_rectangle(game_offscreen_buffer_t *buffer, rect_t *rect, f32 
 }
 
 
+
+internal void draw_map_2d(game_offscreen_buffer_t *buffer) {
+    i32 x, y, xo, yo;
+
+    for (y = 0; y < g_map_height; y++) {
+        for (x = 0; x < g_map_width; x++) {
+            f32 r;
+            f32 g;
+            f32 b;
+
+            if (map_w[y * g_map_width + x] > 0) {
+                r = 1.0f;
+                g = 1.0f;
+                b = 1.0f;
+            } else {
+                r = .0f;
+                g = .0f;
+                b = .0f;
+            }
+
+            xo = x * g_tile_size;
+            yo = y * g_tile_size;
+
+            rect_t rect = {xo + 1 , yo + 1, g_tile_size - 1, g_tile_size - 1};
+            draw_rectangle(buffer, &rect, r, g, b);
+        }
+    }
+}
+
+
+// void game_update_and_render(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)
+GAME_UPDATE_AND_RENDER(game_update_and_render) {
+    rect_t top = {0, 0,  buffer->width, buffer->height};
+    draw_rectangle(buffer, &top, .3f, .3f, .3f);
+
+
+    // rect_t top2 = {10, 10,  10, 10};
+    // draw_rectangle(buffer, &top2, .3f, .0f, .3f);
+
+
+    draw_map_2d(buffer);
+}
+
+
 void game_output_sound(game_state_t *game_state, game_sound_output_buffer_t *buffer, int tone_Hz) {
     // i16 toneVolume = 3000;
     // f32 wavePeriod = (f32)buffer->samples_per_second / tone_Hz;
@@ -72,18 +131,6 @@ void game_output_sound(game_state_t *game_state, game_sound_output_buffer_t *buf
         *sample_out++ = sample_value;
         *sample_out++ = sample_value;
     }
-}
-
-
-// void game_update_and_render(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)
-GAME_UPDATE_AND_RENDER(game_update_and_render) {
-    
-    i32 half_height = buffer->height / 2;
-    rect_t top = {0, 0,  buffer->width, half_height + 1};
-    draw_rectangle(buffer, &top, 1.0f, .0f, .0f);
-
-    rect_t bottom = {0, half_height,  buffer->width,  half_height};
-    draw_rectangle(buffer, &bottom, .0f, 1.0f, .0f);
 }
 
 

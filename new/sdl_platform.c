@@ -4,7 +4,6 @@
 #include "log.h"
 #include "common_platform.h"
 #include "raystorm.h"
-#include "linux_platform.h"
 
 
 // To suppress vs code error
@@ -19,7 +18,7 @@
 /*****************************************************************************
  *                                  DEFINES
  *****************************************************************************/
-#define SDL_WIDTH                   960
+#define SDL_WIDTH                   1024
 #define SDL_HEIGHT                  540
 #define SDL_STATE_FILE_NAME_COUNT   4096
 #define MAX_CONTROLLERS 4

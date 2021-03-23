@@ -23,8 +23,8 @@ run: $(APP_NAME)
 %.o : %.c %.h log.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(APP_NAME): linux_platform.c linux_platform.h common_platform.h $(OBJS)
-	$(CC) $(CFLAGS) linux_platform.c -o $(APP_NAME) $(OBJS) $(LIBS)
+$(APP_NAME): sdl_platform.c common_platform.h $(OBJS)
+	$(CC) $(CFLAGS) sdl_platform.c -o $(APP_NAME) $(OBJS) $(LIBS)
 
 .PHONY: clean
 clean:
