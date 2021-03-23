@@ -102,7 +102,7 @@ internal void draw_map_2d(game_offscreen_buffer_t *buffer) {
             xo = x * g_tile_size;
             yo = y * g_tile_size;
 
-            rect_t rect = {xo + 1 , yo + 1, g_tile_size - 1, g_tile_size - 1};
+            rect_t rect = {xo + 1, yo + 1, g_tile_size - 1, g_tile_size - 1};
             draw_rectangle(buffer, &rect, r, g, b);
         }
     }
@@ -119,6 +119,24 @@ internal void draw_player(game_offscreen_buffer_t *buffer) {
 GAME_UPDATE_AND_RENDER(game_update_and_render) {
     rect_t top = {0, 0,  buffer->width, buffer->height};
     draw_rectangle(buffer, &top, .3f, .0f, .3f);
+
+    game_controller_input_t *controller = &input->controllers[0];
+
+    if (controller->up.ended_down) {
+        g_player_y -= 1;
+    }
+
+    if (controller->down.ended_down) {
+        g_player_y += 1;
+    }
+
+    if (controller->left.ended_down) {
+        g_player_x -= 1;
+    }
+
+    if (controller->right.ended_down) {
+        g_player_x += 1;
+    }
 
     draw_map_2d(buffer);
     draw_player(buffer);
