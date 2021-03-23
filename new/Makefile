@@ -8,7 +8,7 @@ LIBS =
 
 # In case we compile on macos (Darwin is the name) we needs to set the openssl dir
 ifeq ($(UNAME), Darwin)
-# LIBS += -framework GLUT -framework OpenGL -framework Cocoa
+LIBS += -l SDL2-2.0.0
 else
 LIBS += -lSDL2 -lm
 endif

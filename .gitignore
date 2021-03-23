@@ -2,3 +2,4 @@ raystorm
 raystorm_sdl
 .vscode/settings.json
 *.o
+new/raystorm.dSYM/Contents/Info.plist
