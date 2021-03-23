@@ -1,3 +1,4 @@
 raystorm
 raystorm_sdl
 .vscode/settings.json
+*.o

@@ -2,17 +2,18 @@
 UNAME := $(shell uname)
 
 APP_NAME = raystorm
-CFLAGS = -O0
+# -Wno-write-strings -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function -Wno-sign-compare -Wno-unused-result -Wno-strict-aliasing -Wno-switch -fno-exceptions
+CFLAGS = -g -O0 -Wall -Werror -Wno-unused-function -Wno-unused-variable -DRS_DEBUG
 LIBS =
 
 # In case we compile on macos (Darwin is the name) we needs to set the openssl dir
 ifeq ($(UNAME), Darwin)
-LIBS += -framework GLUT -framework OpenGL -framework Cocoa
+# LIBS += -framework GLUT -framework OpenGL -framework Cocoa
 else
-LIBS += -lGL -lGLU -lglut
+LIBS += -lSDL2
 endif
 
-OBJS = renderer.o raystorm.o
+OBJS = raystorm.o
 
 all: $(APP_NAME)
 
@@ -22,8 +23,8 @@ run: $(APP_NAME)
 %.o : %.c %.h log.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(APP_NAME): platform.c $(OBJS)
-	$(CC) $(CFLAGS) platform.c -o $(APP_NAME) $(OBJS) $(LIBS)
+$(APP_NAME): linux_platform.c linux_platform.h common_platform.h $(OBJS)
+	$(CC) $(CFLAGS) linux_platform.c -o $(APP_NAME) $(OBJS) $(LIBS)
 
 .PHONY: clean
 clean:
