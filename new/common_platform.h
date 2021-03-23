@@ -17,7 +17,10 @@
 #define Gigabytes(value) (Megabytes(value) * 1024)
 #define Terabytes(value) (Gigabytes(value) * 1024)
 
-#define Pi32 3.14159265359f
+#define Pi32                3.14159265359f
+#define P2                  Pi32 / 2
+#define P3                  3 * Pi32 / 2
+#define DR                  0.0174533f          // One degree in radians
 
 #define internal static
 #define local_persist static

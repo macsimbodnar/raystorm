@@ -461,7 +461,7 @@ int main(int argc, char *argv[]) {
     CHECK_ERR(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC | SDL_INIT_AUDIO));
 
     // Create the window
-    SDL_Window *window = SDL_CreateWindow("Nasty Hero", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SDL_WIDTH, SDL_HEIGHT, SDL_WINDOW_RESIZABLE);
+    SDL_Window *window = SDL_CreateWindow("RayStorm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SDL_WIDTH, SDL_HEIGHT, SDL_WINDOW_RESIZABLE);
     CHECK_NULL(window);
 
     SDL_ShowCursor(g_show_cursor ? SDL_ENABLE : SDL_DISABLE);
