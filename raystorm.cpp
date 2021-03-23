@@ -589,17 +589,17 @@ void process_input() {
     int x0 = 0;
 
     if (pdx < 0) {
-        x0 = -20;
+        x0 = -15;
     } else {
-        x0 = 20;
+        x0 = 15;
     }
 
     int y0 = 0;
 
     if (pdy < 0) {
-        y0 = -20;
+        y0 = -15;
     } else {
-        y0 = 20;
+        y0 = 15;
     }
 
     // Calculate the offset postion
