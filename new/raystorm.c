@@ -16,36 +16,38 @@ global_var game_offscreen_buffer_t g_minimap = {
     .bytes_per_pixel = MINIMAP_BYTES_PER_PIXEL
 };
 
-global_var i32 g_player_x = 60;
-global_var i32 g_player_y = 60;
+global_var i32 g_player_tail_x = 0;
+global_var i32 g_player_tail_y = 0;
+global_var i32 g_player_rel_x = 0;
+global_var i32 g_player_rel_y = 0;
 
 
 #define MAP_W       24
 #define MAP_H       24
 u8 map_walls[MAP_W * MAP_H] = {                  // Map of walls 24 * 24
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2,
-    2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2,
-    2, 2, 4, 2, 2, 0, 0, 3, 2, 2, 4, 2, 2, 0, 0, 3, 2, 2, 4, 2, 2, 0, 0, 3,
-    2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 1, 2, 2, 2, 0, 0, 0, 0, 1, 2, 2, 2, 0, 0, 0, 0, 1, 2, 2,
-    2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2,
-    2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2,
-    2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2,
-    2, 2, 4, 2, 2, 0, 0, 3, 2, 2, 4, 2, 2, 0, 0, 3, 2, 2, 4, 2, 2, 0, 0, 3,
-    2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 1, 2, 2, 2, 0, 0, 0, 0, 1, 2, 2, 2, 0, 0, 0, 0, 1, 2, 2,
-    2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2,
-    2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 2, 0, 0, 2,
-    2, 2, 4, 2, 2, 0, 0, 3, 2, 2, 4, 2, 2, 0, 0, 3, 2, 2, 4, 2, 2, 0, 0, 3,
-    2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0,
-    2, 0, 1, 0, 0, 1, 2, 2, 2, 0, 0, 0, 0, 1, 2, 2, 2, 0, 0, 0, 0, 1, 2, 2,
-    2, 0, 1, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2,
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 };
 
@@ -140,44 +142,35 @@ internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) 
     f32 r, g, b;
 
     i32 pixels_per_tile = MINIMAP_PIXELS_PER_TILE;
-    i32 map_start_x;
-    i32 map_start_y;
-    i32 map_end_x;
-    i32 map_end_y;
+    u32 how_many_columns = MINIMAP_W / MINIMAP_PIXELS_PER_TILE;
+    u32 how_many_rows = MINIMAP_H / MINIMAP_PIXELS_PER_TILE;
 
-    map_start_x = 0;
-    map_start_y = 0;
-    map_end_x = MAP_W;
-    map_end_y = MAP_H;
+    i32 map_start_x = g_player_tail_x - how_many_columns / 2 - 1;
+    i32 map_start_y = g_player_tail_y - how_many_rows / 2 - 1;
 
-    // TODO(max): loop only on a subset of the map
-    // u32 how_many_columns = MINIMAP_W / MINIMAP_PIXELS_PER_TILE;
-    // u32 how_many_rows = MINIMAP_H / MINIMAP_PIXELS_PER_TILE;
+    if (map_start_x < 0) {
+        map_start_x = 0;
+    }
 
-    // i32 map_start_x = (g_player_x / pixels_per_tile) - how_many_columns;
-    // i32 map_start_y = (g_player_y / pixels_per_tile) - how_many_rows;
+    if (map_start_y < 0) {
+        map_start_y = 0;
+    }
 
-    // if (map_start_x < 0) {
-    //     map_start_x = 0;
-    // }
+    i32 map_end_x = g_player_tail_x + how_many_columns / 2 + 1;
+    i32 map_end_y = g_player_tail_y + how_many_rows / 2 + 1;
 
-    // if (map_start_y < 0) {
-    //     map_start_y = 0;
-    // }
+    if (map_end_x > MAP_W) {
+        map_end_x = MAP_W;
+    }
 
-    // i32 map_end_x = map_start_x + how_many_columns;
-    // i32 map_end_y = map_start_y + how_many_rows;
+    if (map_end_y > MAP_H) {
+        map_end_y = MAP_H;
+    }
 
-    // if (map_end_x > MAP_W) {
-    //     map_end_x = MAP_W;
-    // }
-
-    // if (map_end_y > MAP_H) {
-    //     map_end_y = MAP_H;
-    // }
-
-    f32 screen_center_x = 0.5f * (f32)g_minimap.width;
-    f32 screen_center_y = 0.5f * (f32)g_minimap.height;
+    // map_start_x = 0;
+    // map_start_y = 0;
+    // map_end_x = MAP_W;
+    // map_end_y = MAP_H;
 
     // Clear g_minimap
     rect_t full_minimap = {0, 0, g_minimap.width, g_minimap.height};
@@ -196,8 +189,8 @@ internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) 
                 b = .0f;
             }
 
-            x_offset = x * pixels_per_tile - g_player_x;
-            y_offset = y * pixels_per_tile - g_player_y;
+            x_offset = ((g_minimap.width / 2) - (g_player_tail_x * pixels_per_tile)) + x * pixels_per_tile;
+            y_offset = ((g_minimap.height / 2) - (g_player_tail_y * pixels_per_tile)) + y * pixels_per_tile;
 
             rect_t rect = {x_offset, y_offset, pixels_per_tile, pixels_per_tile};
             draw_rectangle(&g_minimap, &rect, r, g, b);
@@ -205,16 +198,19 @@ internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) 
     }
 
     // Draw player
+    f32 screen_center_x = 0.5f * (f32)g_minimap.width;
+    f32 screen_center_y = 0.5f * (f32)g_minimap.height;
     f32 player_size = .75f * pixels_per_tile;
     f32 player_half = player_size / 2;
     rect_t rec = {screen_center_x - player_half, screen_center_y - player_half, player_size, player_size};
     draw_rectangle(&g_minimap, &rec, 1.0f, .0f, .0f);
 
     // Draw g_minimap on screen
-
     u32 minimap_x = 10;
     u32 minimap_y = buffer->height - g_minimap.height - 10;
     draw_buffer(buffer, minimap_x, minimap_y, &g_minimap);
+
+    // LOG_I("P(%d, %d)   Min(%d, %d)    Max(%d, %d)", (int)g_player_tail_x, (int)g_player_tail_y, (int)map_start_x, (int)map_start_y, (int)map_end_x, (int)map_end_y);
 }
 
 
@@ -230,19 +226,40 @@ GAME_UPDATE_AND_RENDER(game_update_and_render) {
     game_controller_input_t *controller = &input->controllers[0];
 
     if (controller->up.ended_down) {
-        g_player_y -= 1;
+        g_player_rel_y -= 1;
     }
 
     if (controller->down.ended_down) {
-        g_player_y += 1;
+        g_player_rel_y += 1;
     }
 
     if (controller->left.ended_down) {
-        g_player_x -= 1;
+        g_player_rel_x -= 1;
     }
 
     if (controller->right.ended_down) {
-        g_player_x += 1;
+        g_player_rel_x += 1;
+    }
+
+
+    if (g_player_rel_y > 5) {
+        g_player_rel_y = 0;
+        ++g_player_tail_y;
+    }
+
+    if (g_player_rel_y < -5) {
+        g_player_rel_y = 0;
+        --g_player_tail_y;
+    }
+
+    if (g_player_rel_x < -5) {
+        g_player_rel_x = 0;
+        --g_player_tail_x;
+    }
+
+    if (g_player_rel_x > 5) {
+        g_player_rel_x = 0;
+        ++g_player_tail_x;
     }
 
     rect_t rec = {.0f, .0f, buffer->width, buffer->height};
