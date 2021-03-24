@@ -82,8 +82,9 @@ typedef struct {
 
 
 typedef struct {
-    game_update_and_render_fn *update_and_render;
-    game_get_sound_samples_fn *get_sound_samples;
+    game_initialize_fn          *initialize;
+    game_update_and_render_fn   *update_and_render;
+    game_get_sound_samples_fn   *get_sound_samples;
 } sdl_game_code_t;
 
 
@@ -97,6 +98,8 @@ global_var bool32                   g_show_cursor;
 global_var bool32                   g_running;
 global_var bool32                   g_pause;
 global_var sdl_offscreen_buffer_t   g_back_buffer;
+global_var sdl_sound_output_t       g_sound_output;
+global_var i16                      *g_audio_samples;
 global_var SDL_GameController       *controller_handles[MAX_CONTROLLERS];
 global_var SDL_Haptic               *rumble_handles[MAX_CONTROLLERS];
 
@@ -146,7 +149,7 @@ internal void sdl_init_audio(i32 samples_per_second, i32 buffer_size) {
 }
 
 
-internal void sdl_clear_buffer(sdl_sound_output_t *sound_output) {
+internal void sdl_clear_buffer(sdl_sound_output_t *g_sound_output) {
     SDL_ClearQueuedAudio(1);
 }
 
@@ -366,6 +369,7 @@ internal void sdl_process_controller(SDL_GameController *controller, game_contro
 internal sdl_game_code_t sdl_load_game_code() {
     sdl_game_code_t result = {};
 
+    result.initialize = game_initialize;
     result.update_and_render = game_update_and_render;
     result.get_sound_samples = game_get_sound_samples;
 
@@ -379,7 +383,7 @@ internal f32 sdl_get_seconds_elapsed(u64 start, u64 end) {
 }
 
 
-internal void sdl_fill_sound_buffer(sdl_sound_output_t *sound_output, int bytes_to_write, game_sound_output_buffer_t *sound_buffer) {
+internal void sdl_fill_sound_buffer(sdl_sound_output_t *g_sound_output, int bytes_to_write, game_sound_output_buffer_t *sound_buffer) {
     SDL_QueueAudio(1, sound_buffer->samples, bytes_to_write);
 }
 
@@ -424,14 +428,17 @@ internal void sdl_close_game_controllers() {
 }
 
 
-/*****************************************************************************
- *                              UTIL FUNCTIONS
- *****************************************************************************/
-internal game_controller_input_t *get_controller(game_input_t *input, unsigned int index) {
-    ASSERT(index < ARRAY_COUNT(input->controllers));
-    return &input->controllers[index];
-}
+internal game_offscreen_buffer_t get_video_buffer() {
+    game_offscreen_buffer_t buffer = {};
 
+    buffer.memory = g_back_buffer.memory;
+    buffer.width = g_back_buffer.width;
+    buffer.height = g_back_buffer.height;
+    buffer.pitch = g_back_buffer.pitch;
+    buffer.bytes_per_pixel = g_back_buffer.bytes_per_pixel;
+
+    return buffer;
+}
 
 
 
@@ -486,18 +493,17 @@ int main(int argc, char *argv[]) {
     // Configure audio
     bool32 sound_is_valid = false;
 
-    sdl_sound_output_t sound_output = {};
-    sound_output.samples_per_second = 48000;
-    sound_output.bytes_per_sample = sizeof(i16) * 2;
-    sound_output.secondary_buffer_size = sound_output.samples_per_second * sound_output.bytes_per_sample;
-    sound_output.safety_bytes = (int)(((f32) sound_output.samples_per_second * (f32) sound_output.bytes_per_sample / game_update_Hz) / 2.0f);
-    sdl_init_audio(sound_output.samples_per_second, sound_output.secondary_buffer_size);
-    sdl_clear_buffer(&sound_output);
+    g_sound_output.samples_per_second = 48000;
+    g_sound_output.bytes_per_sample = sizeof(i16) * 2;
+    g_sound_output.secondary_buffer_size = g_sound_output.samples_per_second * g_sound_output.bytes_per_sample;
+    g_sound_output.safety_bytes = (int)(((f32) g_sound_output.samples_per_second * (f32) g_sound_output.bytes_per_sample / game_update_Hz) / 2.0f);
+    sdl_init_audio(g_sound_output.samples_per_second, g_sound_output.secondary_buffer_size);
+    sdl_clear_buffer(&g_sound_output);
     SDL_PauseAudio(0);
 
     u32 max_possible_overrun = 8;
-    i16 *audio_samples = (i16 *) calloc(sound_output.samples_per_second + max_possible_overrun, sound_output.bytes_per_sample);
-    CHECK_NULL(audio_samples);
+    g_audio_samples = (i16 *) calloc(g_sound_output.samples_per_second + max_possible_overrun, g_sound_output.bytes_per_sample);
+    CHECK_NULL(g_audio_samples);
 
     // Audio debug markers
     int DEBUG_time_marker_index = 0;
@@ -533,6 +539,11 @@ int main(int argc, char *argv[]) {
     u64 flip_wall_clock = sdl_get_wall_clock();
 
     u64 last_cycle_count = _rdtsc();
+
+    // Init game
+    CHECK_NULL(game.initialize);
+    game_offscreen_buffer_t video_buffer = get_video_buffer();
+    game.initialize(&game_memory, &video_buffer);
 
     // Main loop
     while (g_running) {
@@ -597,16 +608,9 @@ int main(int argc, char *argv[]) {
         }
 
         /////////////////////////////////////////////////// Update and Render
-        game_offscreen_buffer_t buffer = {};
-
-        buffer.memory = g_back_buffer.memory;
-        buffer.width = g_back_buffer.width;
-        buffer.height = g_back_buffer.height;
-        buffer.pitch = g_back_buffer.pitch;
-        buffer.bytes_per_pixel = g_back_buffer.bytes_per_pixel;
-
+        video_buffer = get_video_buffer();
         CHECK_NULL(game.update_and_render);
-        game.update_and_render(&game_memory, new_input, &buffer);
+        game.update_and_render(&game_memory, new_input, &video_buffer);
 
         /////////////////////////////////////////////////// Audio
         u64 audio_wall_clock = sdl_get_wall_clock();
@@ -619,24 +623,24 @@ int main(int argc, char *argv[]) {
             sound_is_valid = true;
         }
 
-        u32 expected_sound_bytes_per_frame = (int)((f32)(sound_output.samples_per_second * sound_output.bytes_per_sample) / game_update_Hz);
+        u32 expected_sound_bytes_per_frame = (int)((f32)(g_sound_output.samples_per_second * g_sound_output.bytes_per_sample) / game_update_Hz);
 
         f32 seconds_left_until_flip = (target_seconds_per_frame - from_begin_to_audio_seconds);
         u32 expected_bytes_until_flip = (u32)((seconds_left_until_flip / target_seconds_per_frame) * (f32) expected_sound_bytes_per_frame);
 
-        i32 bytes_to_write = (expected_sound_bytes_per_frame + sound_output.safety_bytes) - queued_audio_bytes;
+        i32 bytes_to_write = (expected_sound_bytes_per_frame + g_sound_output.safety_bytes) - queued_audio_bytes;
 
         if (bytes_to_write < 0) {
             bytes_to_write = 0;
         }
 
         game_sound_output_buffer_t sound_buffer = {};
-        sound_buffer.samples_per_second = sound_output.samples_per_second;
-        // TODO(max): Align8(bytes_to_write / sound_output.bytes_per_sample);
-        sound_buffer.sample_count = bytes_to_write / sound_output.bytes_per_sample;
+        sound_buffer.samples_per_second = g_sound_output.samples_per_second;
+        // TODO(max): Align8(bytes_to_write / g_sound_output.bytes_per_sample);
+        sound_buffer.sample_count = bytes_to_write / g_sound_output.bytes_per_sample;
 
-        bytes_to_write = sound_buffer.sample_count * sound_output.bytes_per_sample;
-        sound_buffer.samples = audio_samples;
+        bytes_to_write = sound_buffer.sample_count * g_sound_output.bytes_per_sample;
+        sound_buffer.samples = g_audio_samples;
 
         CHECK_NULL(game.get_sound_samples);
         game.get_sound_samples(&game_memory, &sound_buffer);
@@ -649,13 +653,13 @@ int main(int argc, char *argv[]) {
 
 #if 0
         u32 audio_latency_bytes = queued_audio_bytes;
-        f32 audio_latency_seconds = (((f32) audio_latency_bytes / (f32)sound_output.bytes_per_sample) / (f32) sound_output.samples_per_second);
+        f32 audio_latency_seconds = (((f32) audio_latency_bytes / (f32)g_sound_output.bytes_per_sample) / (f32) g_sound_output.samples_per_second);
         LOG_D("BTW:%u - Latency:%d (%fs)", bytes_to_write, audio_latency_bytes, audio_latency_seconds);
 #endif  // 0
 
 #endif // RS_DEBUG
 
-        sdl_fill_sound_buffer(&sound_output, bytes_to_write, &sound_buffer);
+        sdl_fill_sound_buffer(&g_sound_output, bytes_to_write, &sound_buffer);
 
 
         /////////////////////////////////////////////////// Frame counter ans sync

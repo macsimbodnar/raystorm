@@ -49,6 +49,12 @@ typedef double              f64;
 typedef i32                 bool32;
 
 
+typedef struct {
+    i32 x;
+    i32 y;
+    i32 width;
+    i32 height;
+} rect_t;
 
 
 typedef struct {
@@ -135,7 +141,6 @@ typedef struct {
 
 
 typedef struct {
-    bool32 is_initialized;
     u64 permanent_storage_size;
     // NOTE(max): required to be cleared to zero at startup
     void *permanent_storage;
@@ -145,15 +150,29 @@ typedef struct {
 } game_memory_t;
 
 
+#define GAME_INITIALIZE(name) void name(game_memory_t *memory, game_offscreen_buffer_t *buffer)
+typedef GAME_INITIALIZE(game_initialize_fn);
+// GAME_INITIALIZE(game_initialize_stub)
+// {
+// }
+
+
 #define GAME_UPDATE_AND_RENDER(name) void name(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render_fn);
-// GAME_UPDATE_AND_RENDER(gameUpdateAndRenderStub)
+// GAME_UPDATE_AND_RENDER(game_update_and_render_stub)
 // {
 // }
 
 
 #define GAME_GET_SOUND_SAMPLES(name) void name(game_memory_t *memory, game_sound_output_buffer_t *sound_buffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples_fn);
-// GAME_GET_SOUND_SAMPLES(gameGetSoundSamplesStub)
+// GAME_GET_SOUND_SAMPLES(game_get_sound_samples_stub)
 // {
 // }
+
+
+game_controller_input_t *get_controller(game_input_t *input, unsigned int index);
+
+
+f32 square(f32 a);
+

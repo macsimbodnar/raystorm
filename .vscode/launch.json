@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/new/raystorm",
             "args": [],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "${workspaceFolder}/new",
             "environment": [],
             "externalConsole": false,

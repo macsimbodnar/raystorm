@@ -3,17 +3,11 @@
 
 
 typedef struct {
-    // memory_arena worldArena;
-    // world *_world;
-
-    // tile_map_position cameraP;
-    // tile_map_position playerP;
-    // v2 dPlayerP;                 // first derivative (player velocity)
-
-    // loaded_bitmap backdrop;
-    // uint32 heroFacingDirection;
-    // hero_bitmaps heroBitmaps[4];
 } game_state_t;
+
+
+// void game_initialize(game_memory_t *memory, game_offscreen_buffer_t *buffer)
+GAME_INITIALIZE(game_initialize);
 
 
 // void game_update_and_render(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)

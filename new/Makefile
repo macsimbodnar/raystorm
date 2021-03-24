@@ -13,17 +13,17 @@ else
 LIBS += -lSDL2 -lm
 endif
 
-OBJS = raystorm.o
+OBJS = common_platform.o raystorm.o
 
 all: $(APP_NAME)
 
 run: $(APP_NAME)
 	./$(APP_NAME)
 
-%.o : %.c %.h log.h
+%.o : %.c %.h log.h assets.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(APP_NAME): sdl_platform.c common_platform.h $(OBJS)
+$(APP_NAME): sdl_platform.c $(OBJS)
 	$(CC) $(CFLAGS) sdl_platform.c -o $(APP_NAME) $(OBJS) $(LIBS)
 
 .PHONY: clean
