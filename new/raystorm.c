@@ -150,6 +150,7 @@ internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) 
     map_end_x = MAP_W;
     map_end_y = MAP_H;
 
+    // TODO(max): loop only on a subset of the map
     // u32 how_many_columns = MINIMAP_W / MINIMAP_PIXELS_PER_TILE;
     // u32 how_many_rows = MINIMAP_H / MINIMAP_PIXELS_PER_TILE;
 
