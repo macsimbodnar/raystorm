@@ -58,6 +58,13 @@ typedef struct {
 
 
 typedef struct {
+    f32 R;
+    f32 G;
+    f32 B;
+} color_t;
+
+
+typedef struct {
     int half_transition_count;
     bool32 ended_down;
 } game_button_state_t;

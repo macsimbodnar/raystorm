@@ -16,48 +16,69 @@ global_var game_offscreen_buffer_t g_minimap = {
     .bytes_per_pixel = MINIMAP_BYTES_PER_PIXEL
 };
 
+global_var color_t RED =        {1.0f, .0f, .0f};
+global_var color_t GREEN =      {.0f, 1.0f, .0f};
+global_var color_t BLUE =       {.0f, .0f, 1.0f};
+global_var color_t WHITE =      {1.0f, 1.0f, 1.0f};
+global_var color_t BLACK =      {.0f, .0f, .0f};
+global_var color_t PURPLE =     {1.0f, .0f, 1.0f};
+
 global_var i32 g_player_tail_x = 0;
 global_var i32 g_player_tail_y = 0;
 global_var i32 g_player_rel_x = 0;
 global_var i32 g_player_rel_y = 0;
+global_var f32 g_player_angle = .0f;
 
 
-#define MAP_W       24
-#define MAP_H       24
-u8 map_walls[MAP_W * MAP_H] = {                  // Map of walls 24 * 24
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
-    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+// #define MAP_W       24
+// #define MAP_H       24
+// u8 map_walls[MAP_W * MAP_H] = {                  // Map of walls 24 * 24
+//     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+//     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+// };
+
+#define MAP_W       8
+#define MAP_H       8
+u8 map_walls[MAP_W * MAP_H] = {
+    1, 1, 1, 1, 1, 1, 1, 1,
+    1, 0, 0, 1, 0, 0, 0, 1,
+    1, 0, 0, 1, 0, 0, 0, 1,
+    1, 0, 0, 1, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 1, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 1,
+    1, 1, 1, 1, 1, 1, 1, 1
 };
 
 
-internal u32 round_f32_to_u32(f32 r32) {
+internal u32 inline round_f32_to_u32(f32 r32) {
     u32 result = (u32) roundf(r32);
     return result;
 }
 
-internal void draw_rectangle(game_offscreen_buffer_t *buffer, rect_t *rect, f32 R, f32 G, f32 B) {
+internal void draw_rectangle(game_offscreen_buffer_t *buffer, rect_t *rect, color_t color) {
     i32 min_x = rect->x;
     i32 min_y = rect->y;
     i32 max_x = rect->x + rect->width;
@@ -79,7 +100,7 @@ internal void draw_rectangle(game_offscreen_buffer_t *buffer, rect_t *rect, f32 
         max_y = buffer->height;
     }
 
-    u32 color = ((round_f32_to_u32(R * 255.0f) << 16) | (round_f32_to_u32(G * 255.0f) << 8) | (round_f32_to_u32(B * 255.0f) << 0));
+    u32 color_32 = ((round_f32_to_u32(color.R * 255.0f) << 16) | (round_f32_to_u32(color.G * 255.0f) << 8) | (round_f32_to_u32(color.B * 255.0f) << 0));
 
     u8 *row = (((u8 *) buffer->memory) + min_x * buffer->bytes_per_pixel + min_y * buffer->pitch);
 
@@ -87,7 +108,7 @@ internal void draw_rectangle(game_offscreen_buffer_t *buffer, rect_t *rect, f32 
         u32 *pixel = (u32 *) row;
 
         for (int x = min_x; x < max_x; x++) {
-            *pixel++ = color;
+            *pixel++ = color_32;
         }
 
         row += buffer->pitch;
@@ -174,26 +195,24 @@ internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) 
 
     // Clear g_minimap
     rect_t full_minimap = {0, 0, g_minimap.width, g_minimap.height};
-    draw_rectangle(&g_minimap, &full_minimap, .0f, 1.0f, .0f);
+
+    draw_rectangle(&g_minimap, &full_minimap, GREEN);
 
     for (i32 y = map_start_y; y < map_end_y; ++y) {
         for (i32 x = map_start_x; x < map_end_x; ++x) {
+            color_t color;
 
             if (map_walls[y * MAP_W + x] > 0) {
-                r = 1.0f;
-                g = 1.0f;
-                b = 1.0f;
+                color = WHITE;
             } else {
-                r = .0f;
-                g = .0f;
-                b = .0f;
+                color = BLACK;
             }
 
             x_offset = ((g_minimap.width / 2) - (g_player_tail_x * pixels_per_tile)) + x * pixels_per_tile;
             y_offset = ((g_minimap.height / 2) - (g_player_tail_y * pixels_per_tile)) + y * pixels_per_tile;
 
             rect_t rect = {x_offset, y_offset, pixels_per_tile, pixels_per_tile};
-            draw_rectangle(&g_minimap, &rect, r, g, b);
+            draw_rectangle(&g_minimap, &rect, color);
         }
     }
 
@@ -203,7 +222,7 @@ internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) 
     f32 player_size = .75f * pixels_per_tile;
     f32 player_half = player_size / 2;
     rect_t rec = {screen_center_x - player_half, screen_center_y - player_half, player_size, player_size};
-    draw_rectangle(&g_minimap, &rec, 1.0f, .0f, .0f);
+    draw_rectangle(&g_minimap, &rec, RED);
 
     // Draw g_minimap on screen
     u32 minimap_x = 10;
@@ -214,15 +233,7 @@ internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) 
 }
 
 
-// void game_initialize(game_memory_t *memory, game_offscreen_buffer_t *buffer)
-GAME_INITIALIZE(game_initialize) {
-    game_state_t *game = (game_state_t *) memory->permanent_storage;
-}
-
-
-// void game_update_and_render(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)
-GAME_UPDATE_AND_RENDER(game_update_and_render) {
-    game_state_t *game = (game_state_t *) memory->permanent_storage;
+internal void update_player(game_input_t *input) {
     game_controller_input_t *controller = &input->controllers[0];
 
     if (controller->up.ended_down) {
@@ -261,9 +272,239 @@ GAME_UPDATE_AND_RENDER(game_update_and_render) {
         g_player_rel_x = 0;
         ++g_player_tail_x;
     }
+}
 
+
+internal f32 inline dist(f32 ax, f32 ay, f32 bx, f32 by, f32 angle) {
+    return (bx - ax) * cos(angle) + (by - ay) * sin(angle);
+}
+
+#define FILED_OF_VIEW 60
+internal void draw_rays(game_offscreen_buffer_t *buffer) {
+
+    f32 ray_angle = g_player_angle - DR * 30;
+
+    if (ray_angle < 0) {
+        ray_angle += 2 * Pi32;
+    }
+
+    if (ray_angle > 2 * Pi32) {
+        ray_angle -= 2 * Pi32;
+    }
+
+
+    for (u32 ray = 0; ray < FILED_OF_VIEW; ++ray) {
+        i32 map_x;
+        i32 map_y;
+        i32 map_p;
+        f32 ray_x;
+        f32 ray_y;
+        f32 x_offset;
+        f32 y_offset;
+        i32 depth_of_field;
+        f32 angle_tan;
+        f32 n_tan;
+        f32 distance_h;
+        f32 distance_v;
+        f32 distance_t;
+        f32 hor_x;
+        f32 hor_y;
+        f32 ver_x;
+        f32 ver_y;
+        // ----------- Horizontal lines -----------
+        depth_of_field = 0;
+        angle_tan = -1 / tan(ray_angle);
+        distance_h = 10000000;
+        hor_x = g_player_tail_x;
+        hor_y = g_player_tail_y;
+
+        if (ray_angle > Pi32) {
+            // Looking down
+            ray_y = (((int)g_player_tail_y / 64) * 64) - 0.0001;
+            ray_x = (g_player_rel_y - ray_y) * angle_tan + g_player_tail_x;
+            y_offset = -64;
+            x_offset = -y_offset * angle_tan;
+        }
+
+        if (ray_angle < Pi32) {
+            // Looking up
+            ray_y = (((int)g_player_tail_y / 64) * 64) + 64;
+            ray_x = (g_player_tail_y - ray_y) * angle_tan + g_player_tail_x;
+            y_offset = 64;
+            x_offset = -y_offset * angle_tan;
+        }
+
+        if (ray_angle == 0 || ray_angle == Pi32) {
+            // Looking straight left or right
+            ray_x = g_player_tail_x;
+            ray_y = g_player_tail_y;
+            depth_of_field = 8;
+        }
+
+        while (depth_of_field < 8) {
+            map_x = (int) ray_x / 64;
+            map_y = (int) ray_y / 64;
+            map_p = map_y * map_x + map_x;
+
+            if (map_p > 0 && map_p < map_x * map_y && map_walls[map_p] == 1) {
+                // Hit wall
+                hor_x = ray_x;
+                hor_y = ray_y;
+                distance_h = dist(g_player_tail_x, g_player_tail_x, hor_x, hor_y, ray_angle);
+                depth_of_field = 8;
+            } else {
+                // Next line
+                ray_x += x_offset;
+                ray_y += y_offset;
+                depth_of_field += 1;
+            }
+        }
+
+        // -----------  Vertical lines -----------
+        depth_of_field = 0;
+        n_tan = - tan(ray_angle);
+        distance_v = 10000000;
+        ver_x = g_player_tail_x;
+        ver_y = g_player_tail_y;
+
+        if (ray_angle > P2 && ray_angle < P3) {
+            // Looking left
+            ray_x = (((int)g_player_tail_x / 64) * 64) - 0.0001;
+            ray_y = (g_player_tail_x - ray_x) * n_tan + g_player_tail_y;
+            x_offset = -64;
+            y_offset = -x_offset * n_tan;
+        }
+
+        if (ray_angle < P2 || ray_angle > P3) {
+            // Looking right
+            ray_x = (((int)g_player_tail_x / 64) * 64) + 64;
+            ray_y = (g_player_tail_x - ray_x) * n_tan + g_player_tail_y;
+            x_offset = 64;
+            y_offset = -x_offset * n_tan;
+        }
+
+        if (ray_angle == 0 || ray_angle == Pi32) {
+            // Looking straight up or down
+            ray_x = g_player_tail_x;
+            ray_y = g_player_tail_y;
+            depth_of_field = 8;
+        }
+
+        while (depth_of_field < 8) {
+            map_x = (int) ray_x / 64;
+            map_y = (int) ray_y / 64;
+            map_p = map_y * MAP_W + map_x;
+
+            if (map_p > 0 && map_p < map_x * map_y && map_walls[map_p] == 1) {
+                // Hit wall
+                ver_x = ray_x;
+                ver_y = ray_y;
+                distance_v = dist(g_player_tail_x, g_player_tail_x, ver_x, ver_y, ray_angle);
+                depth_of_field = 8;
+            } else {
+                // Next line
+                ray_x += x_offset;
+                ray_y += y_offset;
+                depth_of_field += 1;
+            }
+        }
+
+        // ----------- DRAW -----------
+
+        // Set the ray to the shorter
+        if (distance_v < distance_h) {
+            ray_x = ver_x;
+            ray_y = ver_y;
+            distance_t = distance_v;
+        }
+
+        if (distance_h < distance_v) {
+            ray_x = hor_x;
+            ray_y = hor_y;
+            distance_t = distance_h;
+        }
+
+        // Draw 3D
+        float ca = g_player_angle - ray_angle;
+
+        color_t color;
+
+        if (ca < 0) {
+            ca += 2 * Pi32;
+            color = (color_t) {0.9f, .0f, .0f};
+        }
+
+        if (ca > 2 * Pi32) {
+            ca -= 2 * Pi32;
+            color = (color_t) {0.6f, .0f, .0f};
+        }
+
+        distance_t = distance_t *cos(ca);                       // Fix fisheye
+
+        int tile_size = 64;
+        float line_h = (tile_size * 320) / distance_t;      // Line height
+
+        if (line_h > 320) {
+            line_h = 320;
+        }
+
+        float line_o = 160 - line_h / 2;                // Line offset
+
+        // Have to split in 2 because on my machine the max line width is less then 8
+        // glLineWidth(4);
+        // glBegin(GL_LINES);
+        // int l = r * 8 + 530 - 2;
+        // glVertex2i(l, line_o);
+        // glVertex2i(l, line_h + line_o);
+        // glEnd();
+
+        // glLineWidth(4);
+        // glBegin(GL_LINES);
+        // glVertex2i(l + 4, line_o);
+        // glVertex2i(l + 4, line_h + line_o);
+        // glEnd();
+
+        rect_t rec = {ray * 8, line_o, 8, line_h + line_o};
+        draw_rectangle(buffer, &rec, color);
+
+        // void draw_rect(size_t width, size_t x_pos, size_t top_y, size_t bottom_y, rgba_t rgba)
+        // draw_rect(8, r * 8, line_o, line_h + line_o, rgb);
+
+        // Update the ray angle
+        ray_angle += DR;
+
+        if (ray_angle < 0) {
+            ray_angle += 2 * Pi32;
+        }
+
+        if (ray_angle > 2 * Pi32) {
+            ray_angle -= 2 * Pi32;
+        }
+    }
+}
+
+
+// void game_initialize(game_memory_t *memory, game_offscreen_buffer_t *buffer)
+GAME_INITIALIZE(game_initialize) {
+    game_state_t *game = (game_state_t *) memory->permanent_storage;
+}
+
+
+// void game_update_and_render(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)
+GAME_UPDATE_AND_RENDER(game_update_and_render) {
+    game_state_t *game = (game_state_t *) memory->permanent_storage;
+
+    // Clear screen
     rect_t rec = {.0f, .0f, buffer->width, buffer->height};
-    draw_rectangle(buffer, &rec, 1.0f, .0f, 1.0f);
+    draw_rectangle(buffer, &rec, PURPLE);
+
+    // Update the player pos
+    update_player(input);
+
+    // Draw the 3d scene
+    draw_rays(buffer);
+
+    // Draw the minimap
     draw_minimap(game, buffer);
 }
 
