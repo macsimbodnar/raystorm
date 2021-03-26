@@ -9,22 +9,16 @@
 #endif
 
 
-
-
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof(array[0]))
 #define Kilobytes(value) ((value) * 1024)
 #define Megabytes(value) (Kilobytes(value) * 1024)
 #define Gigabytes(value) (Megabytes(value) * 1024)
 #define Terabytes(value) (Gigabytes(value) * 1024)
 
-#define Pi32                3.14159265359f
-#define P2                  Pi32 / 2
-#define P3                  3 * Pi32 / 2
-#define DR                  0.0174533f          // One degree in radians
 
-#define internal static
-#define local_persist static
-#define global_var static
+#define internal        static
+#define local_persist   static
+#define global_var      static
 
 #define true                1
 #define false               0
@@ -47,14 +41,6 @@ typedef float               f32;
 typedef double              f64;
 
 typedef i32                 bool32;
-
-
-typedef struct {
-    i32 x;
-    i32 y;
-    i32 width;
-    i32 height;
-} rect_t;
 
 
 typedef struct {
@@ -179,7 +165,4 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples_fn);
 
 
 game_controller_input_t *get_controller(game_input_t *input, unsigned int index);
-
-
-f32 square(f32 a);
 

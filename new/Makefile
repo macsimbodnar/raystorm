@@ -13,7 +13,7 @@ else
 LIBS += -lSDL2 -lm
 endif
 
-OBJS = common_platform.o raystorm.o
+OBJS = common_platform.o intrinsics.o trigonometry.o raystorm.o
 
 all: $(APP_NAME)
 
