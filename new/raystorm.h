@@ -1,8 +1,25 @@
 #pragma once
 #include "common_platform.h"
+#include "tile.h"
 
 
 typedef struct {
+    point_u32_t abs_tile;
+    point_f32_t offset;
+} world_pos_t;
+
+
+typedef struct {
+    tile_map_t *tile_map;
+} world_t;
+
+
+typedef struct {
+    world_t            *world;
+
+    world_pos_t         camera_pos;
+    world_pos_t         player_pos;
+    v2_t                player_velocity;               // first derivate
 } game_state_t;
 
 
