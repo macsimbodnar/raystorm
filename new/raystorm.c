@@ -27,11 +27,14 @@ global_var u32 g_m[17 * 9] = {
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 };
+
 
 void gen_world(world_t *world) {
     world->tile_map->chunks->tiles = g_m;
+    world->tile_map->chunks->width = 17;
+    world->tile_map->chunks->height = 9;
 }
 
 
@@ -114,23 +117,55 @@ internal void draw_buffer(game_offscreen_buffer_t *dest_buffer, const i32 X, con
 }
 
 
-internal void update_player(const game_input_t *input) {
+internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
+    rect_t tile = {};
+    color_t color = {};
+    const tile_map_t *map = game->world->tile_map;
+    const u32 tile_side_in_pixels = map->tile_side_in_pixels;
+    tile.height = tile_side_in_pixels;
+    tile.width = tile_side_in_pixels;
+
+    for (u32 y = 0; y < map->chunks->height; ++y) {
+        for (u32 x = 0; x < map->chunks->width; ++x) {
+            u8 val = get_tile_value(map, x, y);
+
+            if (val) {
+                color = (color_t) {0.8f, 0.8f, 0.8f};
+            } else {
+                color = (color_t) {0.1f, 0.1f, 0.1f};
+            }
+
+            tile.x = x * tile_side_in_pixels;
+            tile.y = y * tile_side_in_pixels;
+
+            draw_rectangle(buffer, tile, color);
+        }
+    }
+
+    rect_t player = (rect_t) {game->player_pos.abs_tile.X, game->player_pos.abs_tile.Y, 30, 30};
+    color = (color_t) {1.0f, .0f, .0f};
+
+    draw_rectangle(buffer, player, color);
+}
+
+
+internal void update_player(const game_input_t *input, game_state_t *game) {
     const game_controller_input_t *controller = &input->controllers[0];
 
     if (controller->up.ended_down) {
-
+        game->player_pos.abs_tile.Y-= 1;
     }
 
     if (controller->down.ended_down) {
-
+        game->player_pos.abs_tile.Y += 1;
     }
 
     if (controller->left.ended_down) {
-
+        game->player_pos.abs_tile.X -= 1;
     }
 
     if (controller->right.ended_down) {
-
+        game->player_pos.abs_tile.X += 1;
     }
 }
 
@@ -158,61 +193,11 @@ GAME_INITIALIZE(game_initialize) {
     game->world->tile_map->chunks_count_x = 1;
     game->world->tile_map->chunks_count_y = 1;
     game->world->tile_map->tile_side_in_meters = 1.4f;
+    game->world->tile_map->tile_side_in_pixels = 58;
 
     game->world->tile_map->chunks = &g_chunks;
     gen_world(game->world);
 }
-
-
-internal void draw_map(game_offscreen_buffer_t *buffer, game_state_t *game) {
-
-    u32 tile_side_in_pixels = 60;
-    f32 meters_to_pixels = (f32)(tile_side_in_pixels / game->world->tile_map->tile_side_in_meters);
-    point_f32_t screen_center = (point_f32_t) {0.5f * (f32)buffer->width, 0.5f * (f32)buffer->height};
-
-    for (i32 rel_row = -100; rel_row < 100; ++rel_row) {
-        for (i32 rel_column = -200; rel_column < 200; ++rel_column) {
-
-            u32 column = game->camera_pos.abs_tile.X + rel_column;
-            u32 row = game->camera_pos.abs_tile.Y + rel_row;
-
-            abs_tile_pos_t pos;
-            pos.tile_chunk.X = column;
-            pos.tile_chunk.Y = row;
-            pos.tile_index_in_chunk = (point_u32_t) {0, 0};
-            u32 tile_id = get_tile_value(game->world->tile_map, pos);
-
-            if (tile_id > 1) {
-                f32 gray = 0.4f;
-
-                if (tile_id == 2) {
-                    gray = 0.8f;
-                }
-
-                if (tile_id > 2) {
-                    gray = 0.25f;
-                }
-
-                if ((column == game->camera_pos.abs_tile.X) && (row == game->camera_pos.abs_tile.Y)) {
-                    gray = 0.0f;
-                }
-
-                point_f32_t tile_side = {0.5f * tile_side_in_pixels, 0.5f * tile_side_in_pixels};
-
-                point_f32_t cen = (point_f32_t) {
-                    screen_center.X - meters_to_pixels *game->camera_pos.offset.X + ((f32) rel_column) *tile_side_in_pixels,
-                                    screen_center.Y + meters_to_pixels *game->camera_pos.offset.Y - ((f32) rel_row) *tile_side_in_pixels
-                };
-
-                point_f32_t min = (point_f32_t) {cen.X - tile_side.X, cen.Y - tile_side.Y};
-                point_f32_t max = (point_f32_t) {cen.X + tile_side.X, cen.Y + tile_side.Y};
-
-                drawRectangle(buffer, min, max, gray, gray, gray);
-            }
-        }
-    }
-}
-
 
 
 // void game_update_and_render(game_memory_t *memory, game_input_t *input, game_offscreen_buffer_t *buffer)
@@ -225,9 +210,9 @@ GAME_UPDATE_AND_RENDER(game_update_and_render) {
     draw_rectangle(buffer, rec, PURPLE);
 
     // Update the player pos
-    update_player(input);
+    update_player(input, game);
 
-    draw_map(buffer, game);
+    draw_map(game, buffer);
 }
 
 

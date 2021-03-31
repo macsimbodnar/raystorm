@@ -266,6 +266,7 @@ internal void sdl_process_pending_events(sdl_state_t *state, game_controller_inp
                     LOG_D("right");
                 } else if (key_code == SDLK_ESCAPE) {
                     LOG_D("esc");
+                    g_running = false;
                 } else if (key_code == SDLK_SPACE) {
                     sdl_process_keyboard_message(&keyboard_controller->x, is_down);
                 }

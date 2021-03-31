@@ -3,7 +3,7 @@ UNAME := $(shell uname)
 
 APP_NAME = raystorm
 # -Wno-write-strings -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function -Wno-sign-compare -Wno-unused-result -Wno-strict-aliasing -Wno-switch -fno-exceptions
-CFLAGS = -g -O0 -Wall -Werror -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable -DRS_DEBUG
+CFLAGS = -g -O0 -Wall -Werror -Wno-unused-function -Wno-unused-variable -DRS_DEBUG
 LIBS =
 
 # In case we compile on macos (Darwin is the name) we needs to set the openssl dir
