@@ -16,6 +16,11 @@ i32 floor_f32_to_i32(f32 r32) {
     return result;
 }
 
+f32 abs_f32(f32 i) {
+    f32 result = (f32) fabs(i);
+    return result;
+}
+
 f32 sinf(f32 x) {
     f32 result = (f32) sin(x);
     return result;

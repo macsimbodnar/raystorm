@@ -3,8 +3,8 @@
 
 // i32 round_f32_to_i32(f32 r32);
 u32 round_f32_to_u32(f32 r32);
-
 i32 floor_f32_to_i32(f32 r32);
+f32 abs_f32(f32 i);
 
 f32 sinf(f32 x);
 f32 cosf(f32 x);

@@ -37,6 +37,56 @@ void gen_world(world_t *world) {
 }
 
 
+internal void draw_line(game_offscreen_buffer_t *buffer, point_u32_t origin, point_u32_t endpoint, const color_t color) {
+    // Kinda bresenham algorithm
+
+    u32 color_32 = ((round_f32_to_u32(color.R * 255.0f) << 16) | (round_f32_to_u32(color.G * 255.0f) << 8) | (round_f32_to_u32(color.B * 255.0f) << 0));
+    i32 delta_x = endpoint.X - origin.X;
+    i32 delta_y = endpoint.Y - origin.Y;
+    i32 x = origin.X;
+    i32 y = origin.Y;
+    i32 p;
+    u32 *pixel;
+
+    if (delta_x > delta_y) {
+
+        p = 2 * delta_y - delta_x;
+
+        while (x < endpoint.X) {
+            pixel = (u32 *)(((u8 *) buffer->memory) + x * buffer->bytes_per_pixel + y * buffer->pitch);
+            *pixel = color_32;
+
+            if (p >= 0) {
+                ++y;
+                p += 2 * delta_y - 2 * delta_x;
+            } else {
+                p += 2 * delta_y;
+            }
+
+            ++x;
+        }
+
+    } else {
+
+        p = 2 * delta_x - delta_y;
+
+        while (y < endpoint.Y) {
+            pixel = (u32 *)(((u8 *) buffer->memory) + x * buffer->bytes_per_pixel + y * buffer->pitch);
+            *pixel = color_32;
+
+            if (p >= 0) {
+                x = x + 1;
+                p = p + 2 * delta_x - 2 * delta_y;
+            } else {
+                p = p + 2 * delta_x;
+            }
+
+            y = y + 1;
+        }
+    }
+}
+
+
 internal void draw_rectangle(game_offscreen_buffer_t *buffer, const rect_t rect, const color_t color) {
     u32 min_x = rect.x;
     u32 min_y = rect.y;
@@ -144,7 +194,7 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
     real_pos_t player_pos = cart_to_real_pos(map, game->player_pos);
 
     // Draw player current tile
-    rect_t player_tile = {player_pos.tile.X * (map->tile_side_in_pixels), player_pos.tile.Y * (map->tile_side_in_pixels), map->tile_side_in_pixels, map->tile_side_in_pixels};
+    rect_t player_tile = {player_pos.tile.X *(map->tile_side_in_pixels), player_pos.tile.Y *(map->tile_side_in_pixels), map->tile_side_in_pixels, map->tile_side_in_pixels};
     draw_rectangle(buffer, player_tile, GREEN);
 
     // Draw player
@@ -156,6 +206,8 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
         game->player_size
     };
     draw_rectangle(buffer, player_rect, RED);
+
+    draw_line(buffer, (point_u32_t) {0, 0}, (point_u32_t) {58 * 17, 58 * 9}, WHITE);
 }
 
 
@@ -217,7 +269,7 @@ GAME_UPDATE_AND_RENDER(game_update_and_render) {
 
     // Clear screen
     rect_t rec = {.0f, .0f, buffer->width, buffer->height};
-    draw_rectangle(buffer, rec, BLACK);
+    draw_rectangle(buffer, rec, PURPLE);
 
     // Update the player pos
     update_player(input, game);
