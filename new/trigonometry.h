@@ -8,10 +8,10 @@
 #define ONCE_DEGREE_IN_RADIANS      0.0174533f
 
 typedef struct {
-    i32 x;
-    i32 y;
-    i32 width;
-    i32 height;
+    u32 x;
+    u32 y;
+    u32 width;
+    u32 height;
 } rect_t;
 
 

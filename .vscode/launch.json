@@ -5,7 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "LLDB new/raystorm",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/new/raystorm",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/new",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        },
+        {
+            "name": "GDB new/raystorm",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/new/raystorm",

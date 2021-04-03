@@ -4,12 +4,6 @@
 
 
 typedef struct {
-    point_u32_t abs_tile;
-    point_f32_t offset;
-} world_pos_t;
-
-
-typedef struct {
     tile_map_t *tile_map;
 } world_t;
 
@@ -17,8 +11,9 @@ typedef struct {
 typedef struct {
     world_t            *world;
 
-    world_pos_t         camera_pos;
-    world_pos_t         player_pos;
+    u32                 player_size;
+    cart_pos_t          camera_pos;
+    cart_pos_t          player_pos;
     v2_t                player_velocity;               // first derivate
 } game_state_t;
 

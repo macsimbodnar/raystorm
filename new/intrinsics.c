@@ -1,6 +1,10 @@
 #include "intrinsics.h"
 #include "math.h"
 
+i32 round_f32_to_i32(f32 r32) {
+    i32 result = (i32) roundf(r32);
+    return result;
+}
 
 u32 round_f32_to_u32(f32 r32) {
     u32 result = (u32) roundf(r32);
