@@ -150,8 +150,8 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
     // Draw player
     f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
     rect_t player_rect = (rect_t) {
-        (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_u32(player_pos.offset.X * meters_to_pixels),
-        (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_u32(player_pos.offset.Y * meters_to_pixels) - game->player_size,
+        (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_u32(player_pos.offset.X * meters_to_pixels) - game->player_size / 2,
+        (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_u32(player_pos.offset.Y * meters_to_pixels) - game->player_size / 2,
         game->player_size,
         game->player_size
     };
