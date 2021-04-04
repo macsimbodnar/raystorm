@@ -11,6 +11,7 @@ global_var color_t BLUE =       {.0f, .0f, 1.0f};
 global_var color_t WHITE =      {1.0f, 1.0f, 1.0f};
 global_var color_t BLACK =      {.0f, .0f, .0f};
 global_var color_t PURPLE =     {1.0f, .0f, 1.0f};
+global_var color_t YELLOW =     {1.0f, 1.0f, .0f};
 
 global_var game_state_t g_game;
 global_var world_t g_world;
@@ -172,12 +173,17 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
             draw_rectangle(buffer, tile, color);
         }
     }
+}
+
+
+internal void draw_player(game_state_t *game, game_offscreen_buffer_t *buffer) {
+    const tile_map_t *map = game->world->tile_map;
 
     real_pos_t player_pos = cart_to_real_pos(map, game->player_pos);
 
     // Draw player current tile
     rect_t player_tile = {player_pos.tile.X *(map->tile_side_in_pixels), player_pos.tile.Y *(map->tile_side_in_pixels), map->tile_side_in_pixels, map->tile_side_in_pixels};
-    draw_rectangle(buffer, player_tile, GREEN);
+    draw_rectangle(buffer, player_tile, YELLOW);
 
     // Draw player
     f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
@@ -190,21 +196,31 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
     draw_rectangle(buffer, player_rect, RED);
 
 
-    for (int i = 0; i < 17; i++) {
-        draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * i + (58 / 2), 0}, GREEN);
-    }
+    // for (int i = 0; i < 17; i++) {
+    //     draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * i + (58 / 2), 0}, GREEN);
+    // }
 
-    for (int i = 0; i < 17; i++) {
-        draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * i + (58 / 2), 58 * 9}, GREEN);
-    }
+    // for (int i = 0; i < 17; i++) {
+    //     draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * i + (58 / 2), 58 * 9}, GREEN);
+    // }
 
-    for (int i = 0; i < 9; i++) {
-        draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {0, 58 * i + (58 / 2)}, GREEN);
-    }
+    // for (int i = 0; i < 9; i++) {
+    //     draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {0, 58 * i + (58 / 2)}, GREEN);
+    // }
 
-    for (int i = 0; i < 9; i++) {
-        draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * 17, 58 * i + (58 / 2)}, GREEN);
-    }
+    // for (int i = 0; i < 9; i++) {
+    //     draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * 17, 58 * i + (58 / 2)}, GREEN);
+    // }
+
+    f32 pdx = cos_f32(game->player_angle);
+    f32 pdy = -sin_f32(game->player_angle);
+
+    point_i32_t start_point = {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2};
+    point_i32_t end_point;
+    end_point.X = start_point.X + round_f32_to_i32(pdx * 30);
+    end_point.Y = start_point.Y + round_f32_to_i32(pdy * 30);
+
+    draw_line(buffer, start_point, end_point, GREEN);
 }
 
 
@@ -221,10 +237,22 @@ internal void update_player(const game_input_t *input, game_state_t *game) {
 
     if (controller->left.ended_down) {
         game->player_pos.offset.X -= 0.1f;
+
+        game->player_angle -= 0.03;
+
+        if (game->player_angle < 0) {
+            game->player_angle += 2 * PI;
+        }
     }
 
     if (controller->right.ended_down) {
         game->player_pos.offset.X += 0.1f;
+
+        game->player_angle += 0.03;
+
+        if (game->player_angle > 2 * PI) {
+            game->player_angle -= 2 * PI;
+        }
     }
 
     recanonicalize_pos(game->world->tile_map, &game->player_pos);
@@ -249,6 +277,7 @@ GAME_INITIALIZE(game_initialize) {
 
     // Init player pos
     game->player_size = 40;
+    game->player_angle = 1.5708f;   // 90 degrees in radiants
     game->player_pos.tile = (point_i32_t) {8, 4};
     game->player_pos.offset = (point_f32_t) {game->world->tile_map->tile_side_in_meters / 2, game->world->tile_map->tile_side_in_meters / 2};
     game->player_velocity = (v2_t) {.0f, .0f};
@@ -272,6 +301,8 @@ GAME_UPDATE_AND_RENDER(game_update_and_render) {
     update_player(input, game);
 
     draw_map(game, buffer);
+
+    draw_player(game, buffer);
 }
 
 
