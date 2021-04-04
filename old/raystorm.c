@@ -74,6 +74,112 @@ u8 map_walls[MAP_W * MAP_H] = {
 };
 
 
+// internal void draw_line(game_offscreen_buffer_t *buffer, point_i32_t A, point_i32_t B, const color_t color) {
+//     // Kinda bresenham algorithm
+//     i32 min_x = (i32)A.X;
+//     i32 min_y = (i32)A.Y;
+//     i32 max_x = (i32)B.X;
+//     i32 max_y = (i32)B.Y;
+
+//     if (A.X >= B.X && A.Y >= B.Y) {
+//         min_x = B.X;
+//         min_y = B.Y;
+//         max_x = A.X;
+//         max_y = A.Y;
+//     } else {
+//         min_x = A.X;
+//         min_y = A.Y;
+//         max_x = B.X;
+//         max_y = B.Y;
+//     }
+
+//     bool32 inverse = false;
+
+//     if ((A.X > B.X && A.Y < B.Y) || (A.X < B.X && A.Y > B.Y)) {
+//         inverse = true;
+//     }
+
+//     u32 color_32 = ((round_f32_to_u32(color.R * 255.0f) << 16) | (round_f32_to_u32(color.G * 255.0f) << 8) | (round_f32_to_u32(color.B * 255.0f) << 0));
+//     i32 delta_x = abs_i32(max_x - min_x);
+//     i32 delta_y = abs_i32(max_y - min_y);
+//     i32 x = min_x;
+//     i32 y = min_y;
+//     i32 end_x = max_x;
+//     i32 end_y = max_y;
+//     i32 p;
+//     u32 *pixel;
+
+//     if (delta_x > delta_y) {
+
+//         p = 2 * delta_y - delta_x;
+
+//         if (inverse) {
+//             while (x < end_x) {
+//                 pixel = (u32 *)(((u8 *) buffer->memory) + x * buffer->bytes_per_pixel + y * buffer->pitch);
+//                 *pixel = color_32;
+
+//                 if (p >= 0) {
+//                     --y;
+//                     p += 2 * delta_y - 2 * delta_x;
+//                 } else {
+//                     p += 2 * delta_y;
+//                 }
+
+//                 ++x;
+//             }
+//         } else {
+//             while (x < end_x) {
+//                 pixel = (u32 *)(((u8 *) buffer->memory) + x * buffer->bytes_per_pixel + y * buffer->pitch);
+//                 *pixel = color_32;
+
+//                 if (p >= 0) {
+//                     ++y;
+//                     p += 2 * delta_y - 2 * delta_x;
+//                 } else {
+//                     p += 2 * delta_y;
+//                 }
+
+//                 ++x;
+//             }
+//         }
+
+//     } else {
+
+//         p = 2 * delta_x - delta_y;
+
+//         if (inverse) {
+//             while (y < end_y) {
+//                 pixel = (u32 *)(((u8 *) buffer->memory) + x * buffer->bytes_per_pixel + y * buffer->pitch);
+//                 *pixel = color_32;
+
+//                 if (p >= 0) {
+//                     --x;
+//                     p = p + 2 * delta_x - 2 * delta_y;
+//                 } else {
+//                     p = p + 2 * delta_x;
+//                 }
+
+//                 y = y + 1;
+//             }
+//         } else {
+//             while (y < end_y) {
+//                 pixel = (u32 *)(((u8 *) buffer->memory) + x * buffer->bytes_per_pixel + y * buffer->pitch);
+//                 *pixel = color_32;
+
+//                 if (p >= 0) {
+//                     x = x + 1;
+//                     p = p + 2 * delta_x - 2 * delta_y;
+//                 } else {
+//                     p = p + 2 * delta_x;
+//                 }
+
+//                 y = y + 1;
+//             }
+//         }
+//     }
+// }
+
+
 internal void draw_rectangle(game_offscreen_buffer_t *buffer, rect_t *rect, color_t color) {
     i32 min_x = rect->x;
     i32 min_y = rect->y;

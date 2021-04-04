@@ -37,77 +37,68 @@ void gen_world(world_t *world) {
 }
 
 
-internal void draw_line(game_offscreen_buffer_t *buffer, point_u32_t origin, point_u32_t endpoint, const color_t color) {
-    // Kinda bresenham algorithm
+internal void draw_line(game_offscreen_buffer_t *buffer, point_i32_t A, point_i32_t B, const color_t color) {
+    // Use Bresenham's principles of integer incremental error to perform all octant line draws
 
-    u32 color_32 = ((round_f32_to_u32(color.R * 255.0f) << 16) | (round_f32_to_u32(color.G * 255.0f) << 8) | (round_f32_to_u32(color.B * 255.0f) << 0));
-    i32 delta_x = endpoint.X - origin.X;
-    i32 delta_y = endpoint.Y - origin.Y;
-    i32 x = origin.X;
-    i32 y = origin.Y;
-    i32 p;
+    // *INDENT-OFF*
+    if (A.X > buffer->width)    A.X = buffer->width;
+    if (A.X < 0)                A.X = 0;
+    if (A.Y > buffer->height)   A.Y = buffer->height;
+    if (A.Y < 0)                A.Y = 0;
+    if (B.X > buffer->width)    B.X = buffer->width;
+    if (B.X < 0)                B.X = 0;
+    if (B.Y > buffer->height)   B.Y = buffer->height;
+    if (B.Y < 0)                B.Y = 0;
+    // *INDENT-ON*
+
     u32 *pixel;
+    u32 color_32 = ((round_f32_to_u32(color.R * 255.0f) << 16) | (round_f32_to_u32(color.G * 255.0f) << 8) | (round_f32_to_u32(color.B * 255.0f) << 0));
 
-    if (delta_x > delta_y) {
+    i32 dx =  abs_i32(A.X - B.X);
+    i32 sx = B.X < A.X ? 1 : -1;
+    i32 dy = -abs_i32(A.Y - B.Y);
+    i32 sy = B.Y < A.Y ? 1 : -1;
+    i32 err = dx + dy;
+    i32 x = B.X;
+    i32 y = B.Y;
+    i32 e2;
 
-        p = 2 * delta_y - delta_x;
+    while (true) {
 
-        while (x < endpoint.X) {
-            pixel = (u32 *)(((u8 *) buffer->memory) + x * buffer->bytes_per_pixel + y * buffer->pitch);
-            *pixel = color_32;
+        pixel = (u32 *)(((u8 *) buffer->memory) + x * buffer->bytes_per_pixel + y * buffer->pitch);
+        *pixel = color_32;
 
-            if (p >= 0) {
-                ++y;
-                p += 2 * delta_y - 2 * delta_x;
-            } else {
-                p += 2 * delta_y;
-            }
-
-            ++x;
+        if (x == A.X && y == A.Y) {
+            break;
         }
 
-    } else {
+        e2 = 2 * err;
 
-        p = 2 * delta_x - delta_y;
+        if (e2 >= dy) {
+            err += dy;
+            x += sx;
+        }
 
-        while (y < endpoint.Y) {
-            pixel = (u32 *)(((u8 *) buffer->memory) + x * buffer->bytes_per_pixel + y * buffer->pitch);
-            *pixel = color_32;
-
-            if (p >= 0) {
-                x = x + 1;
-                p = p + 2 * delta_x - 2 * delta_y;
-            } else {
-                p = p + 2 * delta_x;
-            }
-
-            y = y + 1;
+        if (e2 <= dx) {
+            err += dx;
+            y += sy;
         }
     }
 }
 
 
 internal void draw_rectangle(game_offscreen_buffer_t *buffer, const rect_t rect, const color_t color) {
-    u32 min_x = rect.x;
-    u32 min_y = rect.y;
-    u32 max_x = rect.x + rect.width;
-    u32 max_y = rect.y + rect.height;
+    i32 min_x = rect.x;
+    i32 min_y = rect.y;
+    i32 max_x = rect.x + rect.width;
+    i32 max_y = rect.y + rect.height;
 
-    if (max_x > buffer->width) {
-        max_x = buffer->width;
-    }
-
-    if (max_y > buffer->height) {
-        max_y = buffer->height;
-    }
-
-    if (min_x > max_x) {
-        min_x = 0;
-    }
-
-    if (min_y > max_y) {
-        min_y = 0;
-    }
+    // *INDENT-OFF*
+    if (min_x < 0)                  min_x = 0;
+    if (min_y < 0)                  min_y = 0;
+    if (max_x > buffer->width)      max_x = buffer->width;
+    if (max_y > buffer->height)     max_y = buffer->height;
+    // *INDENT-ON*
 
     u32 color_32 = ((round_f32_to_u32(color.R * 255.0f) << 16) | (round_f32_to_u32(color.G * 255.0f) << 8) | (round_f32_to_u32(color.B * 255.0f) << 0));
 
@@ -125,27 +116,18 @@ internal void draw_rectangle(game_offscreen_buffer_t *buffer, const rect_t rect,
 }
 
 
-internal void draw_buffer(game_offscreen_buffer_t *dest_buffer, const u32 X, const u32 Y, const game_offscreen_buffer_t *source_buffer) {
-    u32 min_x = X;
-    u32 min_y = Y;
-    u32 max_x = min_x + source_buffer->width;
-    u32 max_y = min_y + source_buffer->height;
+internal void draw_buffer(game_offscreen_buffer_t *dest_buffer, const i32 X, const i32 Y, const game_offscreen_buffer_t *source_buffer) {
+    i32 min_x = X;
+    i32 min_y = Y;
+    i32 max_x = min_x + source_buffer->width;
+    i32 max_y = min_y + source_buffer->height;
 
-    if (max_x > dest_buffer->width) {
-        max_x = dest_buffer->width;
-    }
-
-    if (max_y > dest_buffer->height) {
-        max_y = dest_buffer->height;
-    }
-
-    if (min_x > max_x) {
-        min_x = 0;
-    }
-
-    if (min_y > max_y) {
-        min_y = 0;
-    }
+    // *INDENT-OFF*
+    if (min_x < 0)                      min_x = 0;
+    if (min_y < 0)                      min_y = 0;
+    if (max_x > dest_buffer->width)     max_x = dest_buffer->width;
+    if (max_y > dest_buffer->height)    max_y = dest_buffer->height;
+    // *INDENT-ON*
 
     u8 *row = (((u8 *) dest_buffer->memory) + min_x * dest_buffer->bytes_per_pixel + min_y * dest_buffer->pitch);
     u8 *source_row = source_buffer->memory;
@@ -200,14 +182,29 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
     // Draw player
     f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
     rect_t player_rect = (rect_t) {
-        (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_u32(player_pos.offset.X * meters_to_pixels) - game->player_size / 2,
-        (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_u32(player_pos.offset.Y * meters_to_pixels) - game->player_size / 2,
+        (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.X * meters_to_pixels) - game->player_size / 2,
+        (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.Y * meters_to_pixels) - game->player_size / 2,
         game->player_size,
         game->player_size
     };
     draw_rectangle(buffer, player_rect, RED);
 
-    draw_line(buffer, (point_u32_t) {0, 0}, (point_u32_t) {58 * 17, 58 * 9}, WHITE);
+
+    for (int i = 0; i < 17; i++) {
+        draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * i + (58 / 2), 0}, GREEN);
+    }
+
+    for (int i = 0; i < 17; i++) {
+        draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * i + (58 / 2), 58 * 9}, GREEN);
+    }
+
+    for (int i = 0; i < 9; i++) {
+        draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {0, 58 * i + (58 / 2)}, GREEN);
+    }
+
+    for (int i = 0; i < 9; i++) {
+        draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * 17, 58 * i + (58 / 2)}, GREEN);
+    }
 }
 
 
@@ -239,16 +236,6 @@ GAME_INITIALIZE(game_initialize) {
     // game_state_t *game = (game_state_t *) memory->permanent_storage;
     game_state_t *game = &g_game;
 
-    // Init player pos
-    game->player_size = 40;
-    game->player_pos.tile = (point_u32_t) {0, 0};
-    game->player_pos.offset = (point_f32_t) {0.0f, 0.0f};
-    game->player_velocity = (v2_t) {.0f, .0f};
-
-    // Init camera pos
-    game->camera_pos.tile = (point_u32_t) {17 / 2, 9 / 2};
-    game->camera_pos.offset = (point_f32_t) {0.f, .0f};
-
     // Set world
     // TODO(max): Do we need the world_t struct or should we just use the tile_map_t?
     game->world = &g_world;
@@ -259,6 +246,16 @@ GAME_INITIALIZE(game_initialize) {
     game->world->tile_map->tile_side_in_pixels = 58;
 
     gen_world(game->world);
+
+    // Init player pos
+    game->player_size = 40;
+    game->player_pos.tile = (point_i32_t) {8, 4};
+    game->player_pos.offset = (point_f32_t) {game->world->tile_map->tile_side_in_meters / 2, game->world->tile_map->tile_side_in_meters / 2};
+    game->player_velocity = (v2_t) {.0f, .0f};
+
+    // Init camera pos
+    game->camera_pos.tile = (point_i32_t) {17 / 2, 9 / 2};
+    game->camera_pos.offset = (point_f32_t) {0.f, .0f};
 }
 
 

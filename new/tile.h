@@ -8,7 +8,7 @@
  * The abs tile is the coordinate of the tile and the offset is the coordinate from the tile left bottom vertex
  */
 typedef struct {
-    point_u32_t tile;
+    point_i32_t tile;
     point_f32_t offset;
 } cart_pos_t;
 
