@@ -6,7 +6,7 @@ u8 get_tile_value(const tile_map_t *map, u32 X, u32 Y) {
     return res;
 }
 
-real_pos_t cart_to_real_pos(const tile_map_t *map, const cart_pos_t pos) {
+real_pos_t cart_to_real_pos(const tile_map_t *map, const world_pos_t pos) {
     ASSERT(map->height > pos.tile.Y);
     ASSERT(map->tile_side_in_meters >= pos.offset.Y);
 
@@ -22,7 +22,7 @@ real_pos_t cart_to_real_pos(const tile_map_t *map, const cart_pos_t pos) {
 }
 
 
-void recanonicalize_pos(const tile_map_t *map, cart_pos_t *pos) {
+void recanonicalize_pos(const tile_map_t *map, world_pos_t *pos) {
 
     // NOTE(max): the offset must have sign so we can handle negative offsets
     i32 offset_x = floor_f32_to_i32(pos->offset.X / map->tile_side_in_meters);

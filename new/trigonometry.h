@@ -28,13 +28,13 @@ typedef struct {
 
 
 // Vector with that starts from origin and point to the x,y
-typedef struct {
-    f32 x;
-    f32 y;
-} v2_t;
+typedef point_f32_t v2_t;
 
 
 f32 distf(f32 ax, f32 ay, f32 bx, f32 by, f32 angle);
 
 f32 cos_f32(f32 X);
 f32 sin_f32(f32 X);
+
+v2_t scalar_mul_f32(v2_t vec, const f32 scalar);
+v2_t vec_sum_f32(v2_t A, v2_t B);

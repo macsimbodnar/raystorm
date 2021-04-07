@@ -10,9 +10,9 @@
 typedef struct {
     point_i32_t tile;
     point_f32_t offset;
-} cart_pos_t;
+} world_pos_t;
 
-typedef cart_pos_t real_pos_t;
+typedef world_pos_t real_pos_t;
 
 typedef struct {
     f32 tile_side_in_meters;
@@ -27,6 +27,6 @@ typedef struct {
 
 u8 get_tile_value(const tile_map_t *map, u32 X, u32 Y);
 
-real_pos_t cart_to_real_pos(const tile_map_t *map, const cart_pos_t pos);
+real_pos_t cart_to_real_pos(const tile_map_t *map, const world_pos_t pos);
 
-void recanonicalize_pos(const tile_map_t *map, cart_pos_t *pos);
+void recanonicalize_pos(const tile_map_t *map, world_pos_t *pos);

@@ -12,8 +12,8 @@ typedef struct {
     world_t            *world;
 
     u32                 player_size;
-    cart_pos_t          camera_pos;
-    cart_pos_t          player_pos;
+    world_pos_t          camera_pos;
+    world_pos_t          player_pos;
     f32                 player_angle;               // In radiants
     v2_t                player_velocity;            // first derivate
 } game_state_t;

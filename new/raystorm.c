@@ -227,16 +227,21 @@ internal void draw_player(game_state_t *game, game_offscreen_buffer_t *buffer) {
 internal void update_player(const game_input_t *input, game_state_t *game) {
     const game_controller_input_t *controller = &input->controllers[0];
 
+    v2_t player_second_derivate = {};
+
     if (controller->up.ended_down) {
-        game->player_pos.offset.Y += 0.1f;
+        // game->player_pos.offset.Y += 0.1f;
+        player_second_derivate.Y = 1.0f;
     }
 
     if (controller->down.ended_down) {
-        game->player_pos.offset.Y -= 0.1f;
+        // game->player_pos.offset.Y -= 0.1f;
+        player_second_derivate.Y = -1.0f;
     }
 
     if (controller->left.ended_down) {
-        game->player_pos.offset.X -= 0.1f;
+        // game->player_pos.offset.X -= 0.1f;
+        player_second_derivate.X = -1.0f;
 
         game->player_angle -= 0.03;
 
@@ -246,7 +251,8 @@ internal void update_player(const game_input_t *input, game_state_t *game) {
     }
 
     if (controller->right.ended_down) {
-        game->player_pos.offset.X += 0.1f;
+        // game->player_pos.offset.X += 0.1f;
+        player_second_derivate.X = 1.0f;
 
         game->player_angle += 0.03;
 
@@ -255,7 +261,27 @@ internal void update_player(const game_input_t *input, game_state_t *game) {
         }
     }
 
-    recanonicalize_pos(game->world->tile_map, &game->player_pos);
+    // If we are traveling not on x ot y axis
+    if (player_second_derivate.X != 0.0f && player_second_derivate.Y != 0.0f) {
+        // Normalizing the length so we don't move faster on the diagonal
+        player_second_derivate = scalar_mul_f32(player_second_derivate, 0.707106781187f);
+    }
+
+    const f32 speed = 20.0f;                     // [m/s^2]
+    player_second_derivate = scalar_mul_f32(player_second_derivate, speed);
+
+    // Deceleration
+    player_second_derivate = vec_sum_f32(player_second_derivate, scalar_mul_f32(game->player_velocity, -1.5f));
+
+    // Calculate the new player position based on his velocity and the time elapsed from the last check
+    world_pos_t new_player_pos = game->player_pos;
+    v2_t A = scalar_mul_f32(scalar_mul_f32(player_second_derivate, 0.5f), squaref(input->dt_for_frame));
+    v2_t B = scalar_mul_f32(game->player_velocity, input->dt_for_frame);
+    new_player_pos.offset =  vec_sum_f32(new_player_pos.offset, vec_sum_f32(A, B));
+    game->player_velocity = vec_sum_f32(game->player_velocity, scalar_mul_f32(player_second_derivate, input->dt_for_frame));
+
+    recanonicalize_pos(game->world->tile_map, &new_player_pos);
+    game->player_pos = new_player_pos;
 }
 
 
