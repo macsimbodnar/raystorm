@@ -16,12 +16,14 @@ global_var color_t YELLOW =     {1.0f, 1.0f, .0f};
 global_var game_state_t g_game;
 global_var world_t g_world;
 global_var tile_map_t g_tile_map;
+global_var u8 g_minimap_memory[500 * 500 * 4];
+global_var game_offscreen_buffer_t g_minimap;
 
 
 global_var u32 g_m[17 * 9] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
@@ -173,6 +175,65 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
             draw_rectangle(buffer, tile, color);
         }
     }
+}
+
+
+internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) {
+    rect_t tile = {};
+    color_t color = {};
+    const tile_map_t *map = game->world->tile_map;
+    const u32 tile_side_in_pixels = map->tile_side_in_pixels / 4;
+    tile.height = tile_side_in_pixels - 2;
+    tile.width = tile_side_in_pixels - 2;
+
+    for (u32 y = 0; y < map->height; ++y) {
+        for (u32 x = 0; x < map->width; ++x) {
+            u8 val = get_tile_value_in_raw_coordinates(map, x, y);
+
+            if (val) {
+                color = (color_t) {0.8f, 0.8f, 0.8f};
+            } else {
+                color = (color_t) {0.1f, 0.1f, 0.1f};
+            }
+
+            tile.x = x * tile_side_in_pixels + 1;
+            tile.y = y * tile_side_in_pixels + 1;
+
+            draw_rectangle(buffer, tile, color);
+        }
+    }
+}
+
+
+internal void draw_player_on_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) {
+    const tile_map_t *map = game->world->tile_map;
+
+    real_pos_t player_pos = cart_to_real_pos(map, game->player_pos);
+
+    // Draw player current tile
+    rect_t player_tile = {player_pos.tile.X *(map->tile_side_in_pixels), player_pos.tile.Y *(map->tile_side_in_pixels), map->tile_side_in_pixels / 4, map->tile_side_in_pixels / 4};
+    draw_rectangle(buffer, player_tile, YELLOW);
+
+    // Draw player
+    f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
+    rect_t player_rect = (rect_t) {
+        (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.X * meters_to_pixels) - game->player_size / 2,
+        (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.Y * meters_to_pixels) - game->player_size / 2,
+        game->player_size / 4,
+        game->player_size / 4
+    };
+    draw_rectangle(buffer, player_rect, RED);
+
+
+    f32 pdx = cos_f32(game->player_angle);
+    f32 pdy = -sin_f32(game->player_angle);
+
+    point_i32_t start_point = {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2};
+    point_i32_t end_point;
+    end_point.X = start_point.X + round_f32_to_i32(pdx * 30) / 4;
+    end_point.Y = start_point.Y + round_f32_to_i32(pdy * 30) / 4;
+
+    draw_line(buffer, start_point, end_point, GREEN);
 }
 
 
@@ -343,6 +404,12 @@ GAME_INITIALIZE(game_initialize) {
     // Init camera pos
     game->camera_pos.tile = (point_i32_t) {17 / 2, 9 / 2};
     game->camera_pos.offset = (point_f32_t) {0.f, .0f};
+
+    g_minimap.bytes_per_pixel = 4;
+    g_minimap.height = buffer->height / 4;
+    g_minimap.width = buffer->width / 4;
+    g_minimap.pitch = g_minimap.width * g_minimap.bytes_per_pixel;
+    g_minimap.memory = (void *) &g_minimap_memory;
 }
 
 
@@ -359,8 +426,12 @@ GAME_UPDATE_AND_RENDER(game_update_and_render) {
     update_player(input, game);
 
     draw_map(game, buffer);
-
     draw_player(game, buffer);
+
+    draw_minimap(game, &g_minimap);
+    // draw_player_on_minimap(game, &g_minimap);
+
+    draw_buffer(buffer, 0, 0, &g_minimap);
 }
 
 
