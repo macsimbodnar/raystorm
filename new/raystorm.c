@@ -159,7 +159,7 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
 
     for (u32 y = 0; y < map->height; ++y) {
         for (u32 x = 0; x < map->width; ++x) {
-            u8 val = get_tile_value(map, x, y);
+            u8 val = get_tile_value_in_raw_coordinates(map, x, y);
 
             if (val) {
                 color = (color_t) {0.8f, 0.8f, 0.8f};
@@ -228,22 +228,22 @@ internal void update_player(const game_input_t *input, game_state_t *game) {
     const game_controller_input_t *controller = &input->controllers[0];
 
     v2_t player_second_derivate = {};
+    f32 direction = .0f;
 
     if (controller->up.ended_down) {
-        // game->player_pos.offset.Y += 0.1f;
-        player_second_derivate.Y = 1.0f;
+        // player_second_derivate.Y = 1.0f;
+        direction = 1.0f;
     }
 
     if (controller->down.ended_down) {
-        // game->player_pos.offset.Y -= 0.1f;
-        player_second_derivate.Y = -1.0f;
+        // player_second_derivate.Y = -1.0f;
+        direction = - 1.0f;
     }
 
     if (controller->left.ended_down) {
-        // game->player_pos.offset.X -= 0.1f;
-        player_second_derivate.X = -1.0f;
+        // player_second_derivate.X = -1.0f;
 
-        game->player_angle -= 0.03;
+        game->player_angle += 0.03f;
 
         if (game->player_angle < 0) {
             game->player_angle += 2 * PI;
@@ -251,15 +251,17 @@ internal void update_player(const game_input_t *input, game_state_t *game) {
     }
 
     if (controller->right.ended_down) {
-        // game->player_pos.offset.X += 0.1f;
-        player_second_derivate.X = 1.0f;
+        // player_second_derivate.X = 1.0f;
 
-        game->player_angle += 0.03;
+        game->player_angle -= 0.03f;
 
         if (game->player_angle > 2 * PI) {
             game->player_angle -= 2 * PI;
         }
     }
+
+    player_second_derivate.X = cos_f32(game->player_angle);
+    player_second_derivate.Y = sin_f32(game->player_angle);
 
     // If we are traveling not on x ot y axis
     if (player_second_derivate.X != 0.0f && player_second_derivate.Y != 0.0f) {
@@ -267,21 +269,51 @@ internal void update_player(const game_input_t *input, game_state_t *game) {
         player_second_derivate = scalar_mul_f32(player_second_derivate, 0.707106781187f);
     }
 
-    const f32 speed = 20.0f;                     // [m/s^2]
+    const f32 speed = 45.0f * direction;                     // [m/s^2]
     player_second_derivate = scalar_mul_f32(player_second_derivate, speed);
 
     // Deceleration
-    player_second_derivate = vec_sum_f32(player_second_derivate, scalar_mul_f32(game->player_velocity, -1.5f));
+    player_second_derivate = vec_sum_f32(player_second_derivate, scalar_mul_f32(game->player_velocity, -3.5f));
 
     // Calculate the new player position based on his velocity and the time elapsed from the last check
     world_pos_t new_player_pos = game->player_pos;
-    v2_t A = scalar_mul_f32(scalar_mul_f32(player_second_derivate, 0.5f), squaref(input->dt_for_frame));
+    v2_t A = scalar_mul_f32(scalar_mul_f32(player_second_derivate, 1.0f), squaref(input->dt_for_frame));
     v2_t B = scalar_mul_f32(game->player_velocity, input->dt_for_frame);
     new_player_pos.offset =  vec_sum_f32(new_player_pos.offset, vec_sum_f32(A, B));
     game->player_velocity = vec_sum_f32(game->player_velocity, scalar_mul_f32(player_second_derivate, input->dt_for_frame));
 
     recanonicalize_pos(game->world->tile_map, &new_player_pos);
-    game->player_pos = new_player_pos;
+
+    // Check for wall collision
+    bool32 collided = !is_tile_empty(game->world->tile_map, new_player_pos.tile.X, new_player_pos.tile.Y);
+
+    if (collided) {
+        v2_t r = {};
+
+        if (new_player_pos.tile.X < game->player_pos.tile.X) {
+            r = (v2_t) {1, 0};
+        }
+
+        if (new_player_pos.tile.X > game->player_pos.tile.X) {
+            r = (v2_t) {-1, 0};
+        }
+
+        if (new_player_pos.tile.Y < game->player_pos.tile.Y) {
+            r = (v2_t) {0, 1};
+        }
+
+        if (new_player_pos.tile.Y > game->player_pos.tile.Y) {
+            r = (v2_t) {0, -1};
+        }
+
+        // NOTE(max): this on make the hero bounce
+        // gameState->dPlayerP = gameState->dPlayerP - 2.0f * inner(gameState->dPlayerP, r) * r;
+
+        // this one make it slide on the wall
+        // game->player_velocity = vec_sum_f32(game->player_velocity, scalar_mul_f32(r, (- 1.0f * inner_mul_f32(game->player_velocity, r))));
+    } else {
+        game->player_pos = new_player_pos;
+    }
 }
 
 
@@ -304,7 +336,7 @@ GAME_INITIALIZE(game_initialize) {
     // Init player pos
     game->player_size = 40;
     game->player_angle = 1.5708f;   // 90 degrees in radiants
-    game->player_pos.tile = (point_i32_t) {8, 4};
+    game->player_pos.tile = (point_i32_t) {1, 1};
     game->player_pos.offset = (point_f32_t) {game->world->tile_map->tile_side_in_meters / 2, game->world->tile_map->tile_side_in_meters / 2};
     game->player_velocity = (v2_t) {.0f, .0f};
 

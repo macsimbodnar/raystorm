@@ -38,3 +38,4 @@ f32 sin_f32(f32 X);
 
 v2_t scalar_mul_f32(v2_t vec, const f32 scalar);
 v2_t vec_sum_f32(v2_t A, v2_t B);
+f32 inner_mul_f32(v2_t A, v2_t B);

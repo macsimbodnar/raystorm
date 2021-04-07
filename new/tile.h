@@ -25,7 +25,9 @@ typedef struct {
 } tile_map_t;
 
 
+u8 get_tile_value_in_raw_coordinates(const tile_map_t *map, u32 X, u32 Y);
 u8 get_tile_value(const tile_map_t *map, u32 X, u32 Y);
+bool32 is_tile_empty(const tile_map_t *map, u32 X, u32 Y);
 
 real_pos_t cart_to_real_pos(const tile_map_t *map, const world_pos_t pos);
 
