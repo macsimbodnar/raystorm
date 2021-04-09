@@ -191,27 +191,41 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
 
 
 internal void draw_player(game_state_t *game, game_offscreen_buffer_t *buffer) {
+
     const tile_map_t *map = game->world->tile_map;
+    const real_pos_t player_pos = cart_to_real_pos(map, game->player_pos);
+    const f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
+    // const i32 camera_offset_x = round_f32_to_i32(player.offset.X * meters_to_pixels);
+    // const i32 camera_offset_y = round_f32_to_i32(player.offset.Y * meters_to_pixels);
+    // const i32 half_buffer_w = buffer->width / 2;
+    // const i32 half_buffer_h = buffer->height / 2;
 
-    // real_pos_t player_pos = cart_to_real_pos(map, game->player_pos);
-
+    // const i32 tile_x = half_buffer_w + player.tile.X * map->tile_side_in_pixels;
+    // const i32 tile_y = half_buffer_h + player.tile.Y * map->tile_side_in_pixels;
     // Draw player current tile
-    // rect_t player_tile = {player_pos.tile.X *(map->tile_side_in_pixels), player_pos.tile.Y *(map->tile_side_in_pixels), map->tile_side_in_pixels, map->tile_side_in_pixels};
-    // draw_rectangle(buffer, player_tile, YELLOW);
+
 
     // Draw player
-    f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
     // rect_t player_rect = {
     //     (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.X * meters_to_pixels) - game->player_size / 2,
     //     (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.Y * meters_to_pixels) - game->player_size / 2,
     //     game->player_size,
     //     game->player_size
-    // };s
+    // };
 
     i32 half_player = game->player_size / 2;
     i32 x = (buffer->width / 2) - half_player;
     i32 y = (buffer->height / 2) - half_player;
     rect_t player_rect = {x, y, game->player_size, game->player_size};
+
+    rect_t player_tile = {
+        (buffer->width / 2) - round_f32_to_i32(player_pos.offset.X * meters_to_pixels),
+        (buffer->height / 2) - round_f32_to_i32(player_pos.offset.Y * meters_to_pixels),
+        map->tile_side_in_pixels,
+        map->tile_side_in_pixels
+    };
+
+    draw_rectangle(buffer, player_tile, YELLOW);
     draw_rectangle(buffer, player_rect, RED);
 
     // for (int i = 0; i < 17; i++) {
