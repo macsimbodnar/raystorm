@@ -152,37 +152,19 @@ internal void draw_buffer(game_offscreen_buffer_t *dest_buffer, const i32 X, con
 
 
 internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
-    rect_t tile = {};
-    color_t color = {};
+
     const tile_map_t *map = game->world->tile_map;
+    const real_pos_t camera = cart_to_real_pos(map, game->camera_pos);
+    const f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
+    const i32 camera_offset_x = round_f32_to_i32(camera.offset.X * meters_to_pixels);
+    const i32 camera_offset_y = round_f32_to_i32(camera.offset.Y * meters_to_pixels);
+    const i32 half_buffer_w = buffer->width / 2;
+    const i32 half_buffer_h = buffer->height / 2;
+
     const u32 tile_side_in_pixels = map->tile_side_in_pixels;
-    tile.height = tile_side_in_pixels - 2;
-    tile.width = tile_side_in_pixels - 2;
 
-    for (u32 y = 0; y < map->height; ++y) {
-        for (u32 x = 0; x < map->width; ++x) {
-            u8 val = get_tile_value_in_raw_coordinates(map, x, y);
-
-            if (val) {
-                color = (color_t) {0.8f, 0.8f, 0.8f};
-            } else {
-                color = (color_t) {0.1f, 0.1f, 0.1f};
-            }
-
-            tile.x = x * tile_side_in_pixels + 1;
-            tile.y = y * tile_side_in_pixels + 1;
-
-            draw_rectangle(buffer, tile, color);
-        }
-    }
-}
-
-
-internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) {
     rect_t tile = {};
     color_t color = {};
-    const tile_map_t *map = game->world->tile_map;
-    const u32 tile_side_in_pixels = map->tile_side_in_pixels / 4;
     tile.height = tile_side_in_pixels - 2;
     tile.width = tile_side_in_pixels - 2;
 
@@ -196,66 +178,41 @@ internal void draw_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) 
                 color = (color_t) {0.1f, 0.1f, 0.1f};
             }
 
-            tile.x = x * tile_side_in_pixels + 1;
-            tile.y = y * tile_side_in_pixels + 1;
+            tile.x = 1 + (half_buffer_w + (x - camera.tile.X) * tile_side_in_pixels) - camera_offset_x;
+            tile.y = 1 + (half_buffer_h + (y - camera.tile.Y) * tile_side_in_pixels) - camera_offset_y;
+
+            // tile.x = x * tile_side_in_pixels + 1;
+            // tile.y = y * tile_side_in_pixels + 1;
 
             draw_rectangle(buffer, tile, color);
         }
     }
-}
-
-
-internal void draw_player_on_minimap(game_state_t *game, game_offscreen_buffer_t *buffer) {
-    const tile_map_t *map = game->world->tile_map;
-
-    real_pos_t player_pos = cart_to_real_pos(map, game->player_pos);
-
-    // Draw player current tile
-    rect_t player_tile = {player_pos.tile.X *(map->tile_side_in_pixels), player_pos.tile.Y *(map->tile_side_in_pixels), map->tile_side_in_pixels / 4, map->tile_side_in_pixels / 4};
-    draw_rectangle(buffer, player_tile, YELLOW);
-
-    // Draw player
-    f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
-    rect_t player_rect = (rect_t) {
-        (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.X * meters_to_pixels) - game->player_size / 2,
-        (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.Y * meters_to_pixels) - game->player_size / 2,
-        game->player_size / 4,
-        game->player_size / 4
-    };
-    draw_rectangle(buffer, player_rect, RED);
-
-
-    f32 pdx = cos_f32(game->player_angle);
-    f32 pdy = -sin_f32(game->player_angle);
-
-    point_i32_t start_point = {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2};
-    point_i32_t end_point;
-    end_point.X = start_point.X + round_f32_to_i32(pdx * 30) / 4;
-    end_point.Y = start_point.Y + round_f32_to_i32(pdy * 30) / 4;
-
-    draw_line(buffer, start_point, end_point, GREEN);
 }
 
 
 internal void draw_player(game_state_t *game, game_offscreen_buffer_t *buffer) {
     const tile_map_t *map = game->world->tile_map;
 
-    real_pos_t player_pos = cart_to_real_pos(map, game->player_pos);
+    // real_pos_t player_pos = cart_to_real_pos(map, game->player_pos);
 
     // Draw player current tile
-    rect_t player_tile = {player_pos.tile.X *(map->tile_side_in_pixels), player_pos.tile.Y *(map->tile_side_in_pixels), map->tile_side_in_pixels, map->tile_side_in_pixels};
-    draw_rectangle(buffer, player_tile, YELLOW);
+    // rect_t player_tile = {player_pos.tile.X *(map->tile_side_in_pixels), player_pos.tile.Y *(map->tile_side_in_pixels), map->tile_side_in_pixels, map->tile_side_in_pixels};
+    // draw_rectangle(buffer, player_tile, YELLOW);
 
     // Draw player
     f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
-    rect_t player_rect = (rect_t) {
-        (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.X * meters_to_pixels) - game->player_size / 2,
-        (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.Y * meters_to_pixels) - game->player_size / 2,
-        game->player_size,
-        game->player_size
-    };
-    draw_rectangle(buffer, player_rect, RED);
+    // rect_t player_rect = {
+    //     (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.X * meters_to_pixels) - game->player_size / 2,
+    //     (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.Y * meters_to_pixels) - game->player_size / 2,
+    //     game->player_size,
+    //     game->player_size
+    // };s
 
+    i32 half_player = game->player_size / 2;
+    i32 x = (buffer->width / 2) - half_player;
+    i32 y = (buffer->height / 2) - half_player;
+    rect_t player_rect = {x, y, game->player_size, game->player_size};
+    draw_rectangle(buffer, player_rect, RED);
 
     // for (int i = 0; i < 17; i++) {
     //     draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * i + (58 / 2), 0}, GREEN);
@@ -288,22 +245,18 @@ internal void draw_player(game_state_t *game, game_offscreen_buffer_t *buffer) {
 internal void update_player(const game_input_t *input, game_state_t *game) {
     const game_controller_input_t *controller = &input->controllers[0];
 
-    v2_t player_second_derivate = {};
+    v2_t player_offset = {};
     f32 direction = .0f;
 
     if (controller->up.ended_down) {
-        // player_second_derivate.Y = 1.0f;
-        direction = 1.0f;
+        direction += 1.0f;
     }
 
     if (controller->down.ended_down) {
-        // player_second_derivate.Y = -1.0f;
-        direction = - 1.0f;
+        direction += - 1.0f;
     }
 
     if (controller->left.ended_down) {
-        // player_second_derivate.X = -1.0f;
-
         game->player_angle += 0.03f;
 
         if (game->player_angle < 0) {
@@ -312,8 +265,6 @@ internal void update_player(const game_input_t *input, game_state_t *game) {
     }
 
     if (controller->right.ended_down) {
-        // player_second_derivate.X = 1.0f;
-
         game->player_angle -= 0.03f;
 
         if (game->player_angle > 2 * PI) {
@@ -321,60 +272,19 @@ internal void update_player(const game_input_t *input, game_state_t *game) {
         }
     }
 
-    player_second_derivate.X = cos_f32(game->player_angle);
-    player_second_derivate.Y = sin_f32(game->player_angle);
+    const f32 delta_space = 0.005f * direction / input->dt_for_frame;
 
-    // If we are traveling not on x ot y axis
-    if (player_second_derivate.X != 0.0f && player_second_derivate.Y != 0.0f) {
-        // Normalizing the length so we don't move faster on the diagonal
-        player_second_derivate = scalar_mul_f32(player_second_derivate, 0.707106781187f);
-    }
-
-    const f32 speed = 45.0f * direction;                     // [m/s^2]
-    player_second_derivate = scalar_mul_f32(player_second_derivate, speed);
-
-    // Deceleration
-    player_second_derivate = vec_sum_f32(player_second_derivate, scalar_mul_f32(game->player_velocity, -3.5f));
+    player_offset.X = cos_f32(game->player_angle) * delta_space;
+    player_offset.Y = sin_f32(game->player_angle) * delta_space;
 
     // Calculate the new player position based on his velocity and the time elapsed from the last check
     world_pos_t new_player_pos = game->player_pos;
-    v2_t A = scalar_mul_f32(scalar_mul_f32(player_second_derivate, 1.0f), squaref(input->dt_for_frame));
-    v2_t B = scalar_mul_f32(game->player_velocity, input->dt_for_frame);
-    new_player_pos.offset =  vec_sum_f32(new_player_pos.offset, vec_sum_f32(A, B));
-    game->player_velocity = vec_sum_f32(game->player_velocity, scalar_mul_f32(player_second_derivate, input->dt_for_frame));
+    new_player_pos.offset = vec_sum_f32(new_player_pos.offset, player_offset);
 
     recanonicalize_pos(game->world->tile_map, &new_player_pos);
 
-    // Check for wall collision
-    bool32 collided = !is_tile_empty(game->world->tile_map, new_player_pos.tile.X, new_player_pos.tile.Y);
-
-    if (collided) {
-        v2_t r = {};
-
-        if (new_player_pos.tile.X < game->player_pos.tile.X) {
-            r = (v2_t) {1, 0};
-        }
-
-        if (new_player_pos.tile.X > game->player_pos.tile.X) {
-            r = (v2_t) {-1, 0};
-        }
-
-        if (new_player_pos.tile.Y < game->player_pos.tile.Y) {
-            r = (v2_t) {0, 1};
-        }
-
-        if (new_player_pos.tile.Y > game->player_pos.tile.Y) {
-            r = (v2_t) {0, -1};
-        }
-
-        // NOTE(max): this on make the hero bounce
-        // gameState->dPlayerP = gameState->dPlayerP - 2.0f * inner(gameState->dPlayerP, r) * r;
-
-        // this one make it slide on the wall
-        // game->player_velocity = vec_sum_f32(game->player_velocity, scalar_mul_f32(r, (- 1.0f * inner_mul_f32(game->player_velocity, r))));
-    } else {
-        game->player_pos = new_player_pos;
-    }
+    game->player_pos = new_player_pos;
+    game->camera_pos = game->player_pos;
 }
 
 
@@ -390,16 +300,15 @@ GAME_INITIALIZE(game_initialize) {
 
     // Set tilemap
     game->world->tile_map->tile_side_in_meters = 1.4f;
-    game->world->tile_map->tile_side_in_pixels = 58;
+    game->world->tile_map->tile_side_in_pixels = 30;
 
     gen_world(game->world);
 
     // Init player pos
-    game->player_size = 40;
+    game->player_size = round_f32_to_i32(game->world->tile_map->tile_side_in_pixels * 0.6f);
     game->player_angle = 1.5708f;   // 90 degrees in radiants
     game->player_pos.tile = (point_i32_t) {1, 1};
     game->player_pos.offset = (point_f32_t) {game->world->tile_map->tile_side_in_meters / 2, game->world->tile_map->tile_side_in_meters / 2};
-    game->player_velocity = (v2_t) {.0f, .0f};
 
     // Init camera pos
     game->camera_pos.tile = (point_i32_t) {17 / 2, 9 / 2};
@@ -418,22 +327,32 @@ GAME_UPDATE_AND_RENDER(game_update_and_render) {
     // game_state_t *game = (game_state_t *) memory->permanent_storage;
     game_state_t *game = &g_game;
 
+    // Update the player pos
+    update_player(input, game);
+
+    /**
+     * Draw map
+     */
+
     // Clear screen
     rect_t rec = {.0f, .0f, buffer->width, buffer->height};
     draw_rectangle(buffer, rec, PURPLE);
 
-    // Update the player pos
-    update_player(input, game);
-
     draw_map(game, buffer);
     draw_player(game, buffer);
 
-    draw_minimap(game, &g_minimap);
-    // draw_player_on_minimap(game, &g_minimap);
+    /**
+     * Draw minimap
+     */
 
-    draw_buffer(buffer, 0, 0, &g_minimap);
+    // Clear screen
+    rect_t mini_rec = {.0f, .0f, g_minimap.width, g_minimap.height};
+    draw_rectangle(&g_minimap, mini_rec, BLACK);
+
+    draw_map(game, &g_minimap);
+    draw_player(game, &g_minimap);
+    draw_buffer(buffer, 10, buffer->height - g_minimap.height - 10, &g_minimap);
 }
-
 
 
 /**************************************************************************************************
