@@ -20,23 +20,53 @@ global_var u8 g_minimap_memory[500 * 500 * 4];
 global_var game_offscreen_buffer_t g_minimap;
 
 
-global_var u32 g_m[17 * 9] = {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+// global_var u32 g_m[17 * 9] = {
+//     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+//     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+// };
+
+#define MAP_WIDTH   24
+#define MAP_HEIGHT  24
+
+global_var u32 g_m[MAP_WIDTH * MAP_HEIGHT] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 3, 0, 3, 0, 3, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 2, 2, 0, 2, 2, 0, 0, 0, 0, 3, 0, 3, 0, 3, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 4, 0, 4, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 4, 0, 0, 0, 0, 5, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 4, 0, 4, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 4, 0, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 };
 
 
 void gen_world(world_t *world) {
     world->tile_map->tiles = g_m;
-    world->tile_map->width = 17;
-    world->tile_map->height = 9;
+    world->tile_map->width = MAP_WIDTH;
+    world->tile_map->height = MAP_HEIGHT;
 }
 
 
@@ -163,13 +193,19 @@ internal void draw_map(game_state_t *game, game_offscreen_buffer_t *buffer) {
 
     const u32 tile_side_in_pixels = map->tile_side_in_pixels;
 
-    rect_t tile = {};
     color_t color = {};
+    rect_t tile = {};
     tile.height = tile_side_in_pixels - 2;
     tile.width = tile_side_in_pixels - 2;
 
-    for (u32 y = 0; y < map->height; ++y) {
-        for (u32 x = 0; x < map->width; ++x) {
+    // TODO(max): Loop only on the in screen tails
+    i32 min_x = 0;
+    i32 min_y = 0;
+    i32 max_x = map->width;
+    i32 max_y = map->height;
+
+    for (i32 y = min_y; y < max_y; ++y) {
+        for (i32 x = min_x; x < max_x; ++x) {
             u8 val = get_tile_value_in_raw_coordinates(map, x, y);
 
             if (val) {
@@ -195,29 +231,14 @@ internal void draw_player(game_state_t *game, game_offscreen_buffer_t *buffer) {
     const tile_map_t *map = game->world->tile_map;
     const real_pos_t player_pos = cart_to_real_pos(map, game->player_pos);
     const f32 meters_to_pixels = (f32)(map->tile_side_in_pixels / map->tile_side_in_meters);
-    // const i32 camera_offset_x = round_f32_to_i32(player.offset.X * meters_to_pixels);
-    // const i32 camera_offset_y = round_f32_to_i32(player.offset.Y * meters_to_pixels);
-    // const i32 half_buffer_w = buffer->width / 2;
-    // const i32 half_buffer_h = buffer->height / 2;
 
-    // const i32 tile_x = half_buffer_w + player.tile.X * map->tile_side_in_pixels;
-    // const i32 tile_y = half_buffer_h + player.tile.Y * map->tile_side_in_pixels;
-    // Draw player current tile
-
-
-    // Draw player
-    // rect_t player_rect = {
-    //     (player_pos.tile.X * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.X * meters_to_pixels) - game->player_size / 2,
-    //     (player_pos.tile.Y * (map->tile_side_in_pixels)) + round_f32_to_i32(player_pos.offset.Y * meters_to_pixels) - game->player_size / 2,
-    //     game->player_size,
-    //     game->player_size
-    // };
-
+    // Player rect
     i32 half_player = game->player_size / 2;
     i32 x = (buffer->width / 2) - half_player;
     i32 y = (buffer->height / 2) - half_player;
     rect_t player_rect = {x, y, game->player_size, game->player_size};
 
+    // player current tile rect
     rect_t player_tile = {
         (buffer->width / 2) - round_f32_to_i32(player_pos.offset.X * meters_to_pixels),
         (buffer->height / 2) - round_f32_to_i32(player_pos.offset.Y * meters_to_pixels),
@@ -225,25 +246,12 @@ internal void draw_player(game_state_t *game, game_offscreen_buffer_t *buffer) {
         map->tile_side_in_pixels
     };
 
+    // Draw player current tile
     draw_rectangle(buffer, player_tile, YELLOW);
+    // Draw player pos
     draw_rectangle(buffer, player_rect, RED);
 
-    // for (int i = 0; i < 17; i++) {
-    //     draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * i + (58 / 2), 0}, GREEN);
-    // }
-
-    // for (int i = 0; i < 17; i++) {
-    //     draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * i + (58 / 2), 58 * 9}, GREEN);
-    // }
-
-    // for (int i = 0; i < 9; i++) {
-    //     draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {0, 58 * i + (58 / 2)}, GREEN);
-    // }
-
-    // for (int i = 0; i < 9; i++) {
-    //     draw_line(buffer, (point_i32_t) {player_rect.x + game->player_size / 2, player_rect.y + game->player_size / 2}, (point_i32_t) {58 * 17, 58 * i + (58 / 2)}, GREEN);
-    // }
-
+    // Draw the player direction ray
     f32 pdx = cos_f32(game->player_angle);
     f32 pdy = -sin_f32(game->player_angle);
 
@@ -262,6 +270,7 @@ internal void update_player(const game_input_t *input, game_state_t *game) {
     v2_t player_offset = {};
     f32 direction = .0f;
 
+    // TODO(max): Update the angle based on the elapsed time and not by a const amount
     if (controller->up.ended_down) {
         direction += 1.0f;
     }
@@ -314,7 +323,7 @@ GAME_INITIALIZE(game_initialize) {
 
     // Set tilemap
     game->world->tile_map->tile_side_in_meters = 1.4f;
-    game->world->tile_map->tile_side_in_pixels = 30;
+    game->world->tile_map->tile_side_in_pixels = 20;
 
     gen_world(game->world);
 
@@ -325,7 +334,7 @@ GAME_INITIALIZE(game_initialize) {
     game->player_pos.offset = (point_f32_t) {game->world->tile_map->tile_side_in_meters / 2, game->world->tile_map->tile_side_in_meters / 2};
 
     // Init camera pos
-    game->camera_pos.tile = (point_i32_t) {17 / 2, 9 / 2};
+    game->camera_pos.tile = (point_i32_t) {game->world->tile_map->width / 2, game->world->tile_map->height / 2};
     game->camera_pos.offset = (point_f32_t) {0.f, .0f};
 
     g_minimap.bytes_per_pixel = 4;
@@ -345,15 +354,18 @@ GAME_UPDATE_AND_RENDER(game_update_and_render) {
     update_player(input, game);
 
     /**
-     * Draw map
+     * Draw world
      */
-
     // Clear screen
-    rect_t rec = {.0f, .0f, buffer->width, buffer->height};
-    draw_rectangle(buffer, rec, PURPLE);
+    const rect_t ceiling = {0, 0, buffer->width, buffer->height / 2};
+    const color_t ceiling_color = {0.55f, .95f, .90f};
+    draw_rectangle(buffer, ceiling, ceiling_color);
+    const rect_t floor = {0, buffer->height / 2, buffer->width, buffer->height / 2};
+    const color_t floor_color = {0.75f, .25f, .20f};
+    draw_rectangle(buffer, floor, floor_color);
 
-    draw_map(game, buffer);
-    draw_player(game, buffer);
+    // draw_map(game, buffer);
+    // draw_player(game, buffer);
 
     /**
      * Draw minimap
