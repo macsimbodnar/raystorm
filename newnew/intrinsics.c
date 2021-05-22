@@ -27,12 +27,12 @@ i32 abs_i32(i32 i) {
     return result;
 }
 
-f32 sinf(f32 x) {
+f32 sin_f32(f32 x) {
     f32 result = (f32) sin(x);
     return result;
 }
 
-f32 cosf(f32 x) {
+f32 cos_f32(f32 x) {
     f32 result = (f32) cos(x);
     return result;
 }

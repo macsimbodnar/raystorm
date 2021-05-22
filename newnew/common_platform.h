@@ -23,6 +23,10 @@
 #define true                1
 #define false               0
 
+#define PI                          3.14159265359f
+#define P2                          PIf / 2
+#define P3                          3 * PIf / 2
+#define ONCE_DEGREE_IN_RADIANS      0.0174533f
 
 
 typedef int8_t              i8;
@@ -55,6 +59,18 @@ typedef struct {
     i32 width;
     i32 height;
 } rect_t;
+
+
+typedef struct {
+    i32 X;
+    i32 Y;
+} point_i32_t;
+
+
+typedef struct {
+    f32 X;
+    f32 Y;
+} point_f32_t;
 
 
 typedef struct {
