@@ -177,8 +177,8 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
                 color = (color_t) {0.1f, 0.1f, 0.1f};
             }
 
-            tile.x = 1 + (half_buffer_w + (x - camera.X) * meters_to_pixels);
-            tile.y = 1 + (half_buffer_h + (y - camera.Y) * meters_to_pixels);
+            tile.x = 1 + (half_buffer_w + round_f32_to_i32((x - camera.X) * meters_to_pixels));
+            tile.y = 1 + (half_buffer_h + round_f32_to_i32((y - camera.Y) * meters_to_pixels));
 
             draw_rectangle(buffer, tile, color);
         }
@@ -190,10 +190,26 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
     i32 player_pixels_w_half = round_f32_to_i32(player_pixels_w / 2);
     i32 player_pixels_h_half = round_f32_to_i32(player_pixels_h / 2);
 
+    position_t player_tile;
+    player_tile.X = world->player.pos.X / chunk->side_in_meters;
+    player_tile.Y = world->player.pos.Y / chunk->side_in_meters;
+
+    player_tile = world_to_real_pos(chunk, player_tile);
+
+    // Draw player tiless
+    rect_t player_tile_rect = {
+        half_buffer_w + (floor_f32_to_i32(player_tile.X) - camera.X) * meters_to_pixels, 
+        half_buffer_h + (floor_f32_to_i32(player_tile.Y) - camera.Y) * meters_to_pixels, 
+        chunk->side_in_meters * meters_to_pixels, 
+        chunk->side_in_meters * meters_to_pixels
+    };
+
+    draw_rectangle(buffer, player_tile_rect, YELLOW);
+
     // Player rect
-    i32 x = (buffer->width / 2) - player_pixels_w_half;
-    i32 y = (buffer->height / 2) - player_pixels_h_half;
-    rect_t player_rect = {x, y, player_pixels_w, player_pixels_h};
+    i32 px = (buffer->width / 2) - player_pixels_w_half;
+    i32 py = (buffer->height / 2) - player_pixels_h_half;
+    rect_t player_rect = {px, py, player_pixels_w, player_pixels_h};
 
     // Draw player pos
     draw_rectangle(buffer, player_rect, RED);
@@ -208,7 +224,4 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
     end_point.Y = start_point.Y + round_f32_to_i32(pdy * 30);
 
     draw_line(buffer, start_point, end_point, GREEN);
-
-    rect_t center = {buffer->width / 2 - 2, buffer->height / 2 - 2, 4, 4};
-    draw_rectangle(buffer, center, YELLOW);
 }
