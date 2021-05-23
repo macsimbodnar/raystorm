@@ -52,8 +52,8 @@ GAME_INITIALIZE(game_initialize) {
     g_world.player.angle = 1.5708f;   // 90 degrees in radiants
     g_world.player.pos.X = .0f;
     g_world.player.pos.Y = .0f;
-    g_world.player.H = TILE_SIDE * 0.75f;
-    g_world.player.W = TILE_SIDE * 0.75f;
+    g_world.player.H = TILE_SIDE * 0.5f;
+    g_world.player.W = TILE_SIDE * 0.5f;
 
     g_world.camera.pos.X = 20.0f;
     g_world.camera.pos.Y = 20.0f;

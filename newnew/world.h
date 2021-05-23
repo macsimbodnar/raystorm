@@ -27,8 +27,8 @@ typedef struct {
 } map_t;
 
 typedef struct {
-    u32         W;
-    u32         H;
+    f32         W;
+    f32         H;
     position_t  pos;
     f32         angle;      // [radiants]
 } player_t;

@@ -136,7 +136,7 @@ position_t world_to_real_pos(const tiles_t *chunk, position_t pos) {
     res.X = pos.X;
 
     // Invert the the Y axis
-    res.Y = chunk->H - pos.Y - 1;
+    res.Y = chunk->H - pos.Y;
 
     return res;
 }
@@ -155,8 +155,6 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
     i32 half_buffer_h = buffer->height / 2;
     f32 meters_to_pixels = world->meter_to_pixel_multiplier;
     position_t camera = world_to_real_pos(chunk, world->camera.pos);
-    i32 camera_offset_x = round_f32_to_i32(camera.X * meters_to_pixels);
-    i32 camera_offset_y = round_f32_to_i32(camera.Y * meters_to_pixels);
 
     // TODO(max): Loop only on the in screen tails
     i32 min_x = 0;
@@ -166,8 +164,8 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
 
     color_t color = {};
     rect_t tile = {};
-    tile.height = chunk->side_in_meters * meters_to_pixels - 2;
-    tile.width = chunk->side_in_meters * meters_to_pixels - 2;
+    tile.height = chunk->side_in_meters * meters_to_pixels - 1;
+    tile.width = chunk->side_in_meters * meters_to_pixels - 1;
 
     for (i32 y = min_y; y < max_y; ++y) {
         for (i32 x = min_x; x < max_x; ++x) {
@@ -187,23 +185,16 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
     }
 
     // DRAW PLAYER
-    position_t player_pos = world_to_real_pos(chunk, world->player.pos);
+    i32 player_pixels_w = round_f32_to_i32(world->player.W  * meters_to_pixels);
+    i32 player_pixels_h = round_f32_to_i32(world->player.H  * meters_to_pixels);
+    i32 player_pixels_w_half = round_f32_to_i32(player_pixels_w / 2);
+    i32 player_pixels_h_half = round_f32_to_i32(player_pixels_h / 2);
 
     // Player rect
-    i32 x = (buffer->width / 2) - world->player.W / 2;
-    i32 y = (buffer->height / 2) - world->player.H / 2;
-    rect_t player_rect = {x, y, world->player.W, world->player.H};
+    i32 x = (buffer->width / 2) - player_pixels_w_half;
+    i32 y = (buffer->height / 2) - player_pixels_h_half;
+    rect_t player_rect = {x, y, player_pixels_w, player_pixels_h};
 
-    // player current tile rect
-    rect_t player_tile = {
-        (buffer->width / 2),
-        (buffer->height / 2),
-        meters_to_pixels,
-        meters_to_pixels
-    };
-
-    // Draw player current tile
-    draw_rectangle(buffer, player_tile, YELLOW);
     // Draw player pos
     draw_rectangle(buffer, player_rect, RED);
 
@@ -211,10 +202,13 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
     f32 pdx = cos_f32(world->player.angle);
     f32 pdy = -sin_f32(world->player.angle);
 
-    point_i32_t start_point = {player_rect.x + world->player.W / 2, player_rect.y + world->player.H / 2};
+    point_i32_t start_point = {player_rect.x + player_pixels_w_half, player_rect.y + player_pixels_h_half};
     point_i32_t end_point;
     end_point.X = start_point.X + round_f32_to_i32(pdx * 30);
     end_point.Y = start_point.Y + round_f32_to_i32(pdy * 30);
 
     draw_line(buffer, start_point, end_point, GREEN);
+
+    rect_t center = {buffer->width / 2 - 2, buffer->height / 2 - 2, 4, 4};
+    draw_rectangle(buffer, center, YELLOW);
 }
