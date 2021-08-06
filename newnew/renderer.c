@@ -144,15 +144,27 @@ position_t world_to_real_pos(const tiles_t *chunk, position_t pos) {
 
 void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
 
-    rect_t screen = {0, 0, buffer->width, buffer->height};
+}
+
+
+void draw_minimap(game_offscreen_buffer_t *screen_buffer, const world_t *world) {
+    game_offscreen_buffer_t buffer;
+    buffer.bytes_per_pixel = screen_buffer->bytes_per_pixel;
+    buffer.height = 150;
+    buffer.width = 300;
+    buffer.pitch = buffer.width * buffer.bytes_per_pixel;
+    char mem[4 * 150 * 300]; // = buffer->pitch * buffer->height
+    buffer.memory = (void *)&mem;
+
+    rect_t screen = {0, 0, buffer.width, buffer.height};
     color_t screen_color = {0.5f, 0.5f, 0.5f};
-    draw_rectangle(buffer, screen, screen_color);
+    draw_rectangle(&buffer, screen, screen_color);
 
     // DRAW MAP
 
     const tiles_t *chunk = world->map.current_chunk;
-    i32 half_buffer_w = buffer->width / 2;
-    i32 half_buffer_h = buffer->height / 2;
+    i32 half_buffer_w = buffer.width / 2;
+    i32 half_buffer_h = buffer.height / 2;
     f32 meters_to_pixels = world->meter_to_pixel_multiplier;
     position_t camera = world_to_real_pos(chunk, world->camera.pos);
 
@@ -180,7 +192,7 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
             tile.x = 1 + (half_buffer_w + round_f32_to_i32((x - camera.X) * meters_to_pixels));
             tile.y = 1 + (half_buffer_h + round_f32_to_i32((y - camera.Y) * meters_to_pixels));
 
-            draw_rectangle(buffer, tile, color);
+            draw_rectangle(&buffer, tile, color);
         }
     }
 
@@ -204,15 +216,15 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
         chunk->side_in_meters * meters_to_pixels
     };
 
-    draw_rectangle(buffer, player_tile_rect, YELLOW);
+    draw_rectangle(&buffer, player_tile_rect, YELLOW);
 
     // Player rect
-    i32 px = (buffer->width / 2) - player_pixels_w_half;
-    i32 py = (buffer->height / 2) - player_pixels_h_half;
+    i32 px = (buffer.width / 2) - player_pixels_w_half;
+    i32 py = (buffer.height / 2) - player_pixels_h_half;
     rect_t player_rect = {px, py, player_pixels_w, player_pixels_h};
 
     // Draw player pos
-    draw_rectangle(buffer, player_rect, RED);
+    draw_rectangle(&buffer, player_rect, RED);
 
     // Draw the player direction ray
     f32 pdx = cos_f32(world->player.angle);
@@ -223,5 +235,8 @@ void draw_world(game_offscreen_buffer_t *buffer, const world_t *world) {
     end_point.X = start_point.X + round_f32_to_i32(pdx * 30);
     end_point.Y = start_point.Y + round_f32_to_i32(pdy * 30);
 
-    draw_line(buffer, start_point, end_point, GREEN);
+    draw_line(&buffer, start_point, end_point, GREEN);
+
+    // Draw the minimap buffer into the main buffer
+    draw_buffer(screen_buffer, 0, screen_buffer->height - buffer.height, &buffer);
 }

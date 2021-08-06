@@ -63,6 +63,7 @@ GAME_INITIALIZE(game_initialize) {
 GAME_UPDATE_AND_RENDER(game_update_and_render) {
     update_world(&g_world, input);
     draw_world(buffer, &g_world);
+    draw_minimap(buffer, &g_world);
 }
 
 // void game_get_sound_samples(game_memory_t *memory, game_sound_output_buffer_t *sound_buffer)
