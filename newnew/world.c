@@ -9,28 +9,20 @@ void update_world(world_t* world, const game_input_t* input)
 
   // TODO(max): Update the angle based on the elapsed time and not by a const
   // amount
-  if (controller->up.ended_down) {
-    direction += 1.0f;
-  }
+  if (controller->up.ended_down) { direction += 1.0f; }
 
-  if (controller->down.ended_down) {
-    direction += -1.0f;
-  }
+  if (controller->down.ended_down) { direction += -1.0f; }
 
   if (controller->left.ended_down) {
     world->player.angle += 0.03f;
 
-    if (world->player.angle < 0) {
-      world->player.angle += 2 * PI;
-    }
+    if (world->player.angle < 0) { world->player.angle += 2 * PI; }
   }
 
   if (controller->right.ended_down) {
     world->player.angle -= 0.03f;
 
-    if (world->player.angle > 2 * PI) {
-      world->player.angle -= 2 * PI;
-    }
+    if (world->player.angle > 2 * PI) { world->player.angle -= 2 * PI; }
   }
 
   const f32 delta_space = 0.005f * direction / input->dt_for_frame;

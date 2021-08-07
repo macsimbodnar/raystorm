@@ -118,9 +118,7 @@ internal void sdl_resize_texture(sdl_offscreen_buffer_t* buffer,
   int bytesPerPixel = 4;
   buffer->bytes_per_pixel = bytesPerPixel;
 
-  if (buffer->texture) {
-    SDL_DestroyTexture(buffer->texture);
-  }
+  if (buffer->texture) { SDL_DestroyTexture(buffer->texture); }
 
   buffer->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
                                       SDL_TEXTUREACCESS_STREAMING,
@@ -283,9 +281,7 @@ internal void sdl_process_pending_events(
             if ((key_code == SDLK_RETURN) && alt_key_was_down) {
               SDL_Window* window = SDL_GetWindowFromID(event.window.windowID);
 
-              if (window) {
-                toggle_full_screen(window);
-              }
+              if (window) { toggle_full_screen(window); }
             }
           }
         }
@@ -409,13 +405,9 @@ internal void sdl_open_game_controllers()
   int controller_index = 0;
 
   for (int i = 0; i < max_joysticks; i++) {
-    if (!SDL_IsGameController(i)) {
-      continue;
-    }
+    if (!SDL_IsGameController(i)) { continue; }
 
-    if (controller_index >= MAX_CONTROLLERS) {
-      break;
-    }
+    if (controller_index >= MAX_CONTROLLERS) { break; }
 
     controller_handles[controller_index] = SDL_GameControllerOpen(i);
     SDL_Joystick* joystick_handle =
@@ -436,9 +428,7 @@ internal void sdl_close_game_controllers()
 {
   for (int i = 0; i < MAX_CONTROLLERS; i++) {
     if (controller_handles[i]) {
-      if (rumble_handles[i]) {
-        SDL_HapticClose(rumble_handles[i]);
-      }
+      if (rumble_handles[i]) { SDL_HapticClose(rumble_handles[i]); }
 
       SDL_GameControllerClose(controller_handles[i]);
     }
@@ -603,9 +593,7 @@ int main(int argc, char* argv[])
     sdl_process_pending_events(&sdl_state, new_keyboard_controller);
 
     // If we are in Pause than just skip to the next frame
-    if (g_pause) {
-      continue;
-    }
+    if (g_pause) { continue; }
 
     // Mouse and keyboard as first joystick
     u32 mouse_state =
@@ -665,9 +653,7 @@ int main(int argc, char* argv[])
     u32 queued_audio_bytes = SDL_GetQueuedAudioSize(1);
 
     // TODO(max): WTF
-    if (!sound_is_valid) {
-      sound_is_valid = true;
-    }
+    if (!sound_is_valid) { sound_is_valid = true; }
 
     u32 expected_sound_bytes_per_frame =
         (int)((f32)(g_sound_output.samples_per_second *
@@ -684,9 +670,7 @@ int main(int argc, char* argv[])
         (expected_sound_bytes_per_frame + g_sound_output.safety_bytes) -
         queued_audio_bytes;
 
-    if (bytes_to_write < 0) {
-      bytes_to_write = 0;
-    }
+    if (bytes_to_write < 0) { bytes_to_write = 0; }
 
     game_sound_output_buffer_t sound_buffer = {};
     sound_buffer.samples_per_second = g_sound_output.samples_per_second;
@@ -730,9 +714,7 @@ int main(int argc, char* argv[])
       u32 sleep_MS = (u32)(1000.0f * (target_seconds_per_frame -
                                       seconds_elapsed_from_frame));
 
-      if (sleep_MS > 0) {
-        SDL_Delay(sleep_MS);
-      }
+      if (sleep_MS > 0) { SDL_Delay(sleep_MS); }
 
       f32 test_seconds_elapsed_for_frame =
           sdl_get_seconds_elapsed(last_counter, sdl_get_wall_clock());

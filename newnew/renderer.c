@@ -17,24 +17,14 @@ internal void draw_line(game_offscreen_buffer_t* buffer,
   // Use Bresenham's principles of integer incremental error to perform all
   // octant line draws
 
-  // *INDENT-OFF*
-  if (A.X > buffer->width)
-    A.X = buffer->width;
-  if (A.X < 0)
-    A.X = 0;
-  if (A.Y > buffer->height)
-    A.Y = buffer->height;
-  if (A.Y < 0)
-    A.Y = 0;
-  if (B.X > buffer->width)
-    B.X = buffer->width;
-  if (B.X < 0)
-    B.X = 0;
-  if (B.Y > buffer->height)
-    B.Y = buffer->height;
-  if (B.Y < 0)
-    B.Y = 0;
-  // *INDENT-ON*
+  if (A.X > buffer->width) A.X = buffer->width;
+  if (A.X < 0) A.X = 0;
+  if (A.Y > buffer->height) A.Y = buffer->height;
+  if (A.Y < 0) A.Y = 0;
+  if (B.X > buffer->width) B.X = buffer->width;
+  if (B.X < 0) B.X = 0;
+  if (B.Y > buffer->height) B.Y = buffer->height;
+  if (B.Y < 0) B.Y = 0;
 
   u32* pixel;
   u32 color_32 = ((round_f32_to_u32(color.R * 255.0f) << 16) |
@@ -55,9 +45,7 @@ internal void draw_line(game_offscreen_buffer_t* buffer,
                    y * buffer->pitch);
     *pixel = color_32;
 
-    if (x == A.X && y == A.Y) {
-      break;
-    }
+    if (x == A.X && y == A.Y) { break; }
 
     e2 = 2 * err;
 
@@ -82,16 +70,10 @@ internal void draw_rectangle(game_offscreen_buffer_t* buffer,
   i32 max_x = rect.x + rect.width;
   i32 max_y = rect.y + rect.height;
 
-  // *INDENT-OFF*
-  if (min_x < 0)
-    min_x = 0;
-  if (min_y < 0)
-    min_y = 0;
-  if (max_x > buffer->width)
-    max_x = buffer->width;
-  if (max_y > buffer->height)
-    max_y = buffer->height;
-  // *INDENT-ON*
+  if (min_x < 0) min_x = 0;
+  if (min_y < 0) min_y = 0;
+  if (max_x > buffer->width) max_x = buffer->width;
+  if (max_y > buffer->height) max_y = buffer->height;
 
   u32 color_32 = ((round_f32_to_u32(color.R * 255.0f) << 16) |
                   (round_f32_to_u32(color.G * 255.0f) << 8) |
@@ -121,16 +103,10 @@ internal void draw_buffer(game_offscreen_buffer_t* dest_buffer,
   i32 max_x = min_x + source_buffer->width;
   i32 max_y = min_y + source_buffer->height;
 
-  // *INDENT-OFF*
-  if (min_x < 0)
-    min_x = 0;
-  if (min_y < 0)
-    min_y = 0;
-  if (max_x > dest_buffer->width)
-    max_x = dest_buffer->width;
-  if (max_y > dest_buffer->height)
-    max_y = dest_buffer->height;
-  // *INDENT-ON*
+  if (min_x < 0) min_x = 0;
+  if (min_y < 0) min_y = 0;
+  if (max_x > dest_buffer->width) max_x = dest_buffer->width;
+  if (max_y > dest_buffer->height) max_y = dest_buffer->height;
 
   u8* row = (((u8*)dest_buffer->memory) + min_x * dest_buffer->bytes_per_pixel +
              min_y * dest_buffer->pitch);
@@ -195,27 +171,19 @@ void draw_minimap(game_offscreen_buffer_t* screen_buffer, const world_t* world)
   // Avoid to loop on tails that are out of the screen
   i32 min_x = floor_f32_to_i32(camera.X - (half_buffer_w / meters_to_pixels));
 
-  if (min_x < 0) {
-    min_x = 0;
-  }
+  if (min_x < 0) { min_x = 0; }
 
   i32 min_y = floor_f32_to_i32(camera.Y - (half_buffer_h / meters_to_pixels));
 
-  if (min_y < 0) {
-    min_y = 0;
-  }
+  if (min_y < 0) { min_y = 0; }
 
   i32 max_x = ceil_f32_to_i32(camera.X + (half_buffer_w / meters_to_pixels));
 
-  if (max_x > chunk->W) {
-    max_x = chunk->W;
-  }
+  if (max_x > chunk->W) { max_x = chunk->W; }
 
   i32 max_y = ceil_f32_to_i32(camera.Y + (half_buffer_h / meters_to_pixels));
 
-  if (max_y > chunk->H) {
-    max_y = chunk->H;
-  }
+  if (max_y > chunk->H) { max_y = chunk->H; }
 
   color_t color = {};
   rect_t tile = {};
