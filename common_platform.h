@@ -8,6 +8,8 @@
 #define ASSERT(expression)
 #endif
 
+#define UNUSED(x) (void)(x)
+
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof(array[0]))
 #define Kilobytes(value) ((value)*1024)
 #define Megabytes(value) (Kilobytes(value) * 1024)

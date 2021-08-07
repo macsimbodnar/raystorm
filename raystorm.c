@@ -39,12 +39,14 @@ global_var tiles_t g_tiles;
 // void game_initialize(game_memory_t *memory, game_offscreen_buffer_t *buffer)
 GAME_INITIALIZE(game_initialize)
 {
+  // Unused vars
+  UNUSED(memory);
+  UNUSED(buffer);
+
   g_tiles.H = MAP_HEIGHT;
   g_tiles.W = MAP_HEIGHT;
   g_tiles.side_in_meters = TILE_SIDE;
   g_tiles.tiles = g_m;
-  char a[] =
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   g_world.meter_to_pixel_multiplier = ONE_METER_IN_PIXELS;
 
   g_world.map.num_of_chunks = 1;
@@ -65,6 +67,9 @@ GAME_INITIALIZE(game_initialize)
 // game_offscreen_buffer_t *buffer)
 GAME_UPDATE_AND_RENDER(game_update_and_render)
 {
+  // Unused parameters
+  UNUSED(memory);
+
   update_world(&g_world, input);
   draw_world(buffer, &g_world);
   draw_minimap(buffer, &g_world);
@@ -72,4 +77,7 @@ GAME_UPDATE_AND_RENDER(game_update_and_render)
 
 // void game_get_sound_samples(game_memory_t *memory, game_sound_output_buffer_t
 // *sound_buffer)
-GAME_GET_SOUND_SAMPLES(game_get_sound_samples) {}
+GAME_GET_SOUND_SAMPLES(game_get_sound_samples) {
+  UNUSED(memory);
+  UNUSED(sound_buffer);
+}

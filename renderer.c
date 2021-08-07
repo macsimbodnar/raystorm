@@ -3,10 +3,10 @@
 
 global_var color_t RED = {1.0f, .0f, .0f};
 global_var color_t GREEN = {.0f, 1.0f, .0f};
-global_var color_t BLUE = {.0f, .0f, 1.0f};
-global_var color_t WHITE = {1.0f, 1.0f, 1.0f};
-global_var color_t BLACK = {.0f, .0f, .0f};
-global_var color_t PURPLE = {1.0f, .0f, 1.0f};
+// global_var color_t BLUE = {.0f, .0f, 1.0f};
+// global_var color_t WHITE = {1.0f, 1.0f, 1.0f};
+// global_var color_t BLACK = {.0f, .0f, .0f};
+// global_var color_t PURPLE = {1.0f, .0f, 1.0f};
 global_var color_t YELLOW = {1.0f, 1.0f, .0f};
 
 internal void draw_line(game_offscreen_buffer_t* buffer,
@@ -144,7 +144,10 @@ position_t world_to_real_pos(const tiles_t* chunk, position_t pos)
   return res;
 }
 
-void draw_world(game_offscreen_buffer_t* buffer, const world_t* world) {}
+void draw_world(game_offscreen_buffer_t* buffer, const world_t* world) {
+  UNUSED(buffer);
+  UNUSED(world);
+}
 
 void draw_minimap(game_offscreen_buffer_t* screen_buffer, const world_t* world)
 {
@@ -179,14 +182,14 @@ void draw_minimap(game_offscreen_buffer_t* screen_buffer, const world_t* world)
 
   i32 max_x = ceil_f32_to_i32(camera.X + (half_buffer_w / meters_to_pixels));
 
-  if (max_x > chunk->W) { max_x = chunk->W; }
+  if (max_x > (i32)chunk->W) { max_x = chunk->W; }
 
   i32 max_y = ceil_f32_to_i32(camera.Y + (half_buffer_h / meters_to_pixels));
 
-  if (max_y > chunk->H) { max_y = chunk->H; }
+  if (max_y > (i32)chunk->H) { max_y = chunk->H; }
 
-  color_t color = {};
-  rect_t tile = {};
+  color_t color = {0};
+  rect_t tile = {0};
   tile.height = chunk->side_in_meters * meters_to_pixels - 1;
   tile.width = chunk->side_in_meters * meters_to_pixels - 1;
 

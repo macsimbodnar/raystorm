@@ -132,7 +132,9 @@ internal void sdl_resize_texture(sdl_offscreen_buffer_t* buffer,
 
 internal void sdl_init_audio(i32 samples_per_second, i32 buffer_size)
 {
-  SDL_AudioSpec audio_settings = {};
+  UNUSED(buffer_size);
+
+  SDL_AudioSpec audio_settings = {0};
 
   audio_settings.freq = samples_per_second;
   audio_settings.format = AUDIO_S16LSB;
@@ -149,6 +151,8 @@ internal void sdl_init_audio(i32 samples_per_second, i32 buffer_size)
 
 internal void sdl_clear_buffer(sdl_sound_output_t* g_sound_output)
 {
+  UNUSED(g_sound_output);
+
   SDL_ClearQueuedAudio(1);
 }
 
@@ -229,6 +233,8 @@ internal void sdl_process_pending_events(
     sdl_state_t* state,
     game_controller_input_t* keyboard_controller)
 {
+  UNUSED(state);
+
   SDL_Event event;
 
   while (SDL_PollEvent(&event)) {
@@ -290,8 +296,8 @@ internal void sdl_process_pending_events(
       case SDL_WINDOWEVENT: {
         switch (event.window.event) {
           case SDL_WINDOWEVENT_SIZE_CHANGED: {
-            SDL_Window* window = SDL_GetWindowFromID(event.window.windowID);
-            SDL_Renderer* renderer = SDL_GetRenderer(window);
+            // SDL_Window* window = SDL_GetWindowFromID(event.window.windowID);
+            // SDL_Renderer* renderer = SDL_GetRenderer(window);
           } break;
 
           case SDL_WINDOWEVENT_FOCUS_GAINED: {
@@ -362,7 +368,7 @@ internal void sdl_process_controller(SDL_GameController* controller,
   new_controller->average_tr = sdl_process_game_controller_axis_value(
       trigger_r, CONTROLLER_AXIS_TRIGGER_DEADZONE);
 
-  f32 threshold = 0.5f;
+  // f32 threshold = 0.5f;
 
   // TODO(max): finish process gamepad input buttons with
   // sdl_processGameControllerDigitalButton
@@ -377,7 +383,7 @@ internal void sdl_process_controller(SDL_GameController* controller,
 
 internal sdl_game_code_t sdl_load_game_code()
 {
-  sdl_game_code_t result = {};
+  sdl_game_code_t result = {0};
 
   result.initialize = game_initialize;
   result.update_and_render = game_update_and_render;
@@ -396,6 +402,8 @@ internal void sdl_fill_sound_buffer(sdl_sound_output_t* g_sound_output,
                                     int bytes_to_write,
                                     game_sound_output_buffer_t* sound_buffer)
 {
+  UNUSED(g_sound_output);
+
   SDL_QueueAudio(1, sound_buffer->samples, bytes_to_write);
 }
 
@@ -437,7 +445,7 @@ internal void sdl_close_game_controllers()
 
 internal game_offscreen_buffer_t get_video_buffer()
 {
-  game_offscreen_buffer_t buffer = {};
+  game_offscreen_buffer_t buffer = {0};
 
   buffer.memory = g_back_buffer.memory;
   buffer.width = g_back_buffer.width;
@@ -453,6 +461,9 @@ internal game_offscreen_buffer_t get_video_buffer()
  *****************************************************************************/
 int main(int argc, char* argv[])
 {
+  UNUSED(argc);
+  UNUSED(argv);
+
   LOG_I("Start");
 
   // Load game code
@@ -490,7 +501,7 @@ int main(int argc, char* argv[])
   // Configure refresh rate
   int monitor_refresh_Hz = 60;
   int display_index = SDL_GetWindowDisplayIndex(window);
-  SDL_DisplayMode mode = {};
+  SDL_DisplayMode mode = {0};
   int display_mode_result = SDL_GetDesktopDisplayMode(display_index, &mode);
 
   if (display_mode_result == 0 && mode.refresh_rate > 1) {
@@ -533,11 +544,11 @@ int main(int argc, char* argv[])
   void* base_address = 0;
 #endif
 
-  game_memory_t game_memory = {};
+  game_memory_t game_memory = {0};
   game_memory.permanent_storage_size = Megabytes((u64)256);
   game_memory.transient_storage_size = Gigabytes((u64)1);
 
-  sdl_state_t sdl_state = {};
+  sdl_state_t sdl_state = {0};
   sdl_state.total_size =
       game_memory.permanent_storage_size + game_memory.transient_storage_size;
   sdl_state.game_memory_block =
@@ -551,7 +562,7 @@ int main(int argc, char* argv[])
   CHECK_NULL(game_memory.transient_storage);
 
   // Keyboard and Joystick inputs
-  game_input_t input[2] = {};
+  game_input_t input[2] = {0};
   game_input_t* new_input = &input[0];
   game_input_t* old_input = &input[1];
 
@@ -559,7 +570,7 @@ int main(int argc, char* argv[])
   u64 last_counter = sdl_get_wall_clock();
   u64 flip_wall_clock = sdl_get_wall_clock();
 
-  u64 last_cycle_count = _rdtsc();
+  // u64 last_cycle_count = _rdtsc();
 
   // Init game
   CHECK_NULL(game.initialize);
@@ -582,7 +593,7 @@ int main(int argc, char* argv[])
         (game_controller_input_t){0};  // TODO(max): check if this even work
     new_keyboard_controller->is_connected = true;
 
-    for (int button_index = 0;
+    for (unsigned int button_index = 0;
          button_index < ARRAY_COUNT(new_keyboard_controller->buttons);
          button_index++) {
       new_keyboard_controller->buttons[button_index].ended_down =
@@ -672,7 +683,7 @@ int main(int argc, char* argv[])
 
     if (bytes_to_write < 0) { bytes_to_write = 0; }
 
-    game_sound_output_buffer_t sound_buffer = {};
+    game_sound_output_buffer_t sound_buffer = {0};
     sound_buffer.samples_per_second = g_sound_output.samples_per_second;
     // TODO(max): Align8(bytes_to_write / g_sound_output.bytes_per_sample);
     sound_buffer.sample_count =
@@ -735,8 +746,8 @@ int main(int argc, char* argv[])
 
     //
     u64 end_counter = sdl_get_wall_clock();
-    f32 ms_per_frame =
-        1000.0f * sdl_get_seconds_elapsed(last_counter, end_counter);
+    // f32 ms_per_frame =
+    //     1000.0f * sdl_get_seconds_elapsed(last_counter, end_counter);
     last_counter = end_counter;
 
     sdl_window_dimension_t dimension = sdl_get_window_dimension(window);
