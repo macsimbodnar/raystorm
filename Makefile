@@ -2,27 +2,30 @@
 UNAME := $(shell uname)
 
 APP_NAME = raystorm
-FLAGS = -O0
+# -Wno-write-strings -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function -Wno-sign-compare -Wno-unused-result -Wno-strict-aliasing -Wno-switch -fno-exceptions
+CFLAGS = -g -O0 -Wall -Werror -Wno-unused-function -Wno-unused-variable -DRS_DEBUG
 LIBS =
 
 # In case we compile on macos (Darwin is the name) we needs to set the openssl dir
 ifeq ($(UNAME), Darwin)
-LIBS += -framework GLUT -framework OpenGL -framework Cocoa
+LIBS += -l SDL2-2.0.0
 else
-LIBS += -lGL -lGLU -lglut
+LIBS += -lSDL2 -lm
 endif
+
+OBJS = common_platform.o intrinsics.o world.o renderer.o raystorm.o
 
 all: $(APP_NAME)
 
 run: $(APP_NAME)
 	./$(APP_NAME)
 
-$(APP_NAME): raystorm.cpp
-	$(CXX) $(FLAGS) raystorm.cpp -o $(APP_NAME) $(LIBS)
+%.o : %.c %.h log.h assets.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-raystorm_sdl: raystorm_sdl.cpp 
-	$(CXX) $(FLAGS) -I./renderer raystorm_sdl.cpp renderer/pixello.o -o raystorm_sdl -lSDL2
+$(APP_NAME): sdl_platform.c $(OBJS)
+	$(CC) $(CFLAGS) sdl_platform.c -o $(APP_NAME) $(OBJS) $(LIBS)
 
 .PHONY: clean
 clean:
-	rm -rf *.o $(APP_NAME) raystorm_sdl
+	rm -rf *.o $(APP_NAME)
