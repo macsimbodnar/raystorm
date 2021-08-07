@@ -192,11 +192,30 @@ void draw_minimap(game_offscreen_buffer_t* screen_buffer, const world_t* world)
   f32 meters_to_pixels = world->meter_to_pixel_multiplier;
   position_t camera = world_to_real_pos(chunk, world->camera.pos);
 
-  // TODO(max): Loop only on the in screen tails
-  i32 min_x = 0;
-  i32 min_y = 0;
-  i32 max_x = chunk->W;
-  i32 max_y = chunk->H;
+  // Avoid to loop on tails that are out of the screen
+  i32 min_x = floor_f32_to_i32(camera.X - (half_buffer_w / meters_to_pixels));
+
+  if (min_x < 0) {
+    min_x = 0;
+  }
+
+  i32 min_y = floor_f32_to_i32(camera.Y - (half_buffer_h / meters_to_pixels));
+
+  if (min_y < 0) {
+    min_y = 0;
+  }
+
+  i32 max_x = ceil_f32_to_i32(camera.X + (half_buffer_w / meters_to_pixels));
+
+  if (max_x > chunk->W) {
+    max_x = chunk->W;
+  }
+
+  i32 max_y = ceil_f32_to_i32(camera.Y + (half_buffer_h / meters_to_pixels));
+
+  if (max_y > chunk->H) {
+    max_y = chunk->H;
+  }
 
   color_t color = {};
   rect_t tile = {};
