@@ -1,49 +1,53 @@
 #pragma once
 #include "common_platform.h"
 
-#define TILE_SIDE               1.0f                 // [metres]
-#define ONE_METER_IN_PIXELS     20.0f
+#define TILE_SIDE 1.0f  // [metres]
+#define ONE_METER_IN_PIXELS 20.0f
 
-typedef struct {
-    f32 X;
-    f32 Y;
+typedef struct
+{
+  f32 X;
+  f32 Y;
 } position_t;
 
-typedef struct {
-    u32 W;
-    u32 H;
+typedef struct
+{
+  u32 W;
+  u32 H;
 
-    f32 side_in_meters;
+  f32 side_in_meters;
 
-    u8 *tiles;
+  u8* tiles;
 } tiles_t;
 
-typedef struct {
+typedef struct
+{
+  u32 num_of_chunks;
+  tiles_t* all_chunks;
 
-    u32 num_of_chunks;
-    tiles_t *all_chunks;
-
-    tiles_t *current_chunk;
+  tiles_t* current_chunk;
 } map_t;
 
-typedef struct {
-    f32         W;
-    f32         H;
-    position_t  pos;
-    f32         angle;      // [radiants]
+typedef struct
+{
+  f32 W;
+  f32 H;
+  position_t pos;
+  f32 angle;  // [radiants]
 } player_t;
 
-typedef struct {
-    position_t pos;
+typedef struct
+{
+  position_t pos;
 } camera_t;
 
-typedef struct {
-    f32         meter_to_pixel_multiplier;
+typedef struct
+{
+  f32 meter_to_pixel_multiplier;
 
-    map_t       map;
-    player_t    player;
-    camera_t    camera;
+  map_t map;
+  player_t player;
+  camera_t camera;
 } world_t;
 
-
-void update_world(world_t *world, const game_input_t *input);
+void update_world(world_t* world, const game_input_t* input);

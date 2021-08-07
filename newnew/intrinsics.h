@@ -10,5 +10,5 @@ i32 abs_i32(i32 i);
 f32 sin_f32(f32 x);
 f32 cos_f32(f32 x);
 f32 tanf(f32 x);
- 
+
 f32 squaref(f32 a);
