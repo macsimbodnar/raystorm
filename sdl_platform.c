@@ -84,6 +84,7 @@ typedef struct
   game_initialize_fn* initialize;
   game_update_and_render_fn* update_and_render;
   game_get_sound_samples_fn* get_sound_samples;
+  game_close_fn* close;
 } sdl_game_code_t;
 
 /*****************************************************************************
@@ -388,6 +389,7 @@ internal sdl_game_code_t sdl_load_game_code()
   result.initialize = game_initialize;
   result.update_and_render = game_update_and_render;
   result.get_sound_samples = game_get_sound_samples;
+  result.close = game_close;
 
   return result;
 }
@@ -464,7 +466,7 @@ int main(int argc, char* argv[])
   UNUSED(argc);
   UNUSED(argv);
 
-  LOG_I("Start");
+  LOG_S("Platform start");
 
   // Load game code
   sdl_game_code_t game = sdl_load_game_code();
@@ -783,8 +785,12 @@ int main(int argc, char* argv[])
 
   }  // while
 
+  game.close(&game_memory);
+
   sdl_close_game_controllers();
   SDL_Quit();
+
+  LOG_S("Platform close");
 
   return 0;
 }

@@ -24,7 +24,7 @@ all: $(APP_NAME)
 run: $(APP_NAME)
 	./$(APP_NAME)
 
-%.o : %.c %.h log.h assets.h
+%.o : %.c %.h log.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(APP_NAME): sdl_platform.c $(OBJS)

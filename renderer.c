@@ -1,5 +1,6 @@
 #include "renderer.h"
 #include "intrinsics.h"
+#include "log.h"
 
 global_var color_t RED = {1.0f, .0f, .0f};
 global_var color_t GREEN = {.0f, 1.0f, .0f};
@@ -144,7 +145,9 @@ position_t world_to_real_pos(const tiles_t* chunk, position_t pos)
   return res;
 }
 
-void draw_world(game_offscreen_buffer_t* buffer, const world_t* world) {
+
+void draw_world(game_offscreen_buffer_t* buffer, const world_t* world)
+{
   UNUSED(buffer);
   UNUSED(world);
 }
@@ -226,12 +229,14 @@ void draw_minimap(game_offscreen_buffer_t* screen_buffer, const world_t* world)
 
   // Draw player tiless
   rect_t player_tile_rect = {
-      half_buffer_w +
-          (floor_f32_to_i32(player_tile.X) - camera.X) * meters_to_pixels,
-      half_buffer_h +
-          (floor_f32_to_i32(player_tile.Y) - camera.Y) * meters_to_pixels,
-      chunk->side_in_meters * meters_to_pixels,
-      chunk->side_in_meters * meters_to_pixels};
+      1 + half_buffer_w +
+          round_f32_to_i32((floor_f32_to_i32(player_tile.X) - camera.X) *
+                           meters_to_pixels),
+      1 + half_buffer_h +
+          round_f32_to_i32((floor_f32_to_i32(player_tile.Y) - camera.Y) *
+                           meters_to_pixels),
+      chunk->side_in_meters * meters_to_pixels - 1,
+      chunk->side_in_meters * meters_to_pixels - 1};
 
   draw_rectangle(&buffer, player_tile_rect, YELLOW);
 
@@ -244,8 +249,8 @@ void draw_minimap(game_offscreen_buffer_t* screen_buffer, const world_t* world)
   draw_rectangle(&buffer, player_rect, RED);
 
   // Draw the player direction ray
-  f32 pdx = cos_f32(world->player.angle);
-  f32 pdy = -sin_f32(world->player.angle);
+  f32 pdx = cos_f32(world->player.angle_rad);
+  f32 pdy = -sin_f32(world->player.angle_rad);
 
   point_i32_t start_point = {player_rect.x + player_pixels_w_half,
                              player_rect.y + player_pixels_h_half};

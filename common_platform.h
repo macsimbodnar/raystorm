@@ -1,12 +1,6 @@
 #pragma once
 #include <stdint.h>
-
-#if RS_ASSERTS
-#define ASSERT(expression) \
-  if (!(expression)) { *(int*)0 = 0; }
-#else
-#define ASSERT(expression)
-#endif
+#include <assert.h>
 
 #define UNUSED(x) (void)(x)
 
@@ -26,7 +20,7 @@
 #define PI 3.14159265359f
 #define P2 PIf / 2
 #define P3 3 * PIf / 2
-#define ONCE_DEGREE_IN_RADIANS 0.0174533f
+#define ONC_DEGREE_IN_RADIANS 0.0174533f
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -188,6 +182,9 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples_fn);
 // GAME_GET_SOUND_SAMPLES(game_get_sound_samples_stub)
 // {
 // }
+
+#define GAME_CLOSE(name) void name(game_memory_t* memory)
+typedef GAME_CLOSE(game_close_fn);
 
 game_controller_input_t* get_controller(game_input_t* input,
                                         unsigned int index);

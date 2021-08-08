@@ -2,7 +2,7 @@
 #include "common_platform.h"
 
 #define TILE_SIDE 1.0f  // [metres]
-#define ONE_METER_IN_PIXELS 20.0f
+#define ONE_METER_IN_PIXELS 30.0f
 
 typedef struct
 {
@@ -33,7 +33,7 @@ typedef struct
   f32 W;
   f32 H;
   position_t pos;
-  f32 angle;  // [radiants]
+  f32 angle_rad;  // [radiants]
 } player_t;
 
 typedef struct

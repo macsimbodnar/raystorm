@@ -26,6 +26,18 @@ i32 ceil_f32_to_i32(f32 r32)
   return result;
 }
 
+f32 floor_f32(f32 r32)
+{
+  f32 result = floorf(r32);
+  return result;
+}
+
+f32 ceil_f32(f32 r32)
+{
+  f32 result = ceilf(r32);
+  return result;
+}
+
 f32 abs_f32(f32 i)
 {
   f32 result = (f32)fabs(i);
@@ -59,4 +71,11 @@ f32 tanf(f32 x)
 f32 squaref(f32 a)
 {
   return a * a;
+}
+
+f32 mod_f32(f32 r32)
+{
+  f32 result = r32 - floor_f32(r32);
+  assert(result < 1.0f);
+  return result;
 }
