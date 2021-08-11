@@ -17,7 +17,7 @@ else
 LIBS += -lSDL2 -lm
 endif
 
-OBJS = common_platform.o intrinsics.o world.o renderer.o raystorm.o
+OBJS = common_platform.o memory.o intrinsics.o world.o renderer.o raystorm.o
 
 all: $(APP_NAME)
 
