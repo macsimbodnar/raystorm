@@ -7,7 +7,7 @@ RAYSTORM_FLAGS = -DRS_DEBUG
 DISABLE_WARNINGS =
 DEBUG_CFLAGS = -O0 -g -fsanitize=undefined,address -ftrapv 
 
-CFLAGS = -Wall -Wextra -pedantic -Werror $(RAYSTORM_FLAGS) $(DISABLE_WARNINGS) $(DEBUG_CFLAGS)
+CFLAGS = -std=gnu18 -Wall -Wextra -pedantic -Werror $(RAYSTORM_FLAGS) $(DISABLE_WARNINGS) $(DEBUG_CFLAGS)
 LIBS =
 
 # In case we compile on macos (Darwin is the name) we needs to set the openssl dir
