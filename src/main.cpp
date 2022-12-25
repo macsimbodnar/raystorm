@@ -79,15 +79,20 @@ private:
     return res;
   }
 
-
   void ray_cast()
   {
     const point_t player_pos = player.pixel_pos;
     const point_t player_tile_pos = player.tile_pos();
+    const float screen_dist = SCREEN_W * 20;
+    const int scale = SCREEN_W / NUM_RAYS;
+    const pixel_t color = 0xFFFFFFFF;
+    const uint8_t color_decrement = 10;
 
     // float ray_angle = player.angle;
     float ray_angle = player.angle - HALF_FOW;
     for (int i = 0; i < NUM_RAYS; ++i, ray_angle += DELTA_ANGLE) {
+      pixel_t horizontal_color = color;
+      pixel_t vertical_color = color;
       ray_angle = remainder_f32(ray_angle, TAU);
       const float tan_a = tan_f32(ray_angle);
 
@@ -144,6 +149,16 @@ private:
         if (hit) {
           // HIT THE WALL
           break;
+        }
+
+        if (vertical_color.r > color_decrement) {
+          vertical_color.r -= color_decrement;
+        }
+        if (vertical_color.g > color_decrement) {
+          vertical_color.g -= color_decrement;
+        }
+        if (vertical_color.b > color_decrement) {
+          vertical_color.b -= color_decrement;
         }
 
         vertical_intersection_X += vertical_dx;
@@ -207,6 +222,16 @@ private:
 
         horizontal_intersection_X += horizontal_dx;
         horizontal_intersection_Y += horizontal_dy;
+
+        if (horizontal_color.r > color_decrement) {
+          horizontal_color.r -= color_decrement;
+        }
+        if (horizontal_color.g > color_decrement) {
+          horizontal_color.g -= color_decrement;
+        }
+        if (horizontal_color.b > color_decrement) {
+          horizontal_color.b -= color_decrement;
+        }
       }
 
       // Draw the shorter line:
@@ -218,18 +243,34 @@ private:
                    vertical_intersection_Y, ray_angle);
 
       point_t final_position;
+      float depth;
+      pixel_t final_color;
       if (horizontal_len < vertical_len) {
         final_position = {floor_f32_to_i32(horizontal_intersection_X),
                           floor_f32_to_i32(horizontal_intersection_Y)};
+        depth = horizontal_len;
+        final_color = horizontal_color;
       } else {
         final_position = {floor_f32_to_i32(vertical_intersection_X),
                           floor_f32_to_i32(vertical_intersection_Y)};
+        depth = vertical_len;
+        final_color = vertical_color;
       }
 
-      const point_t a = player.pixel_pos;
-      const point_t b = final_position;
-      draw_line(a, b, 0xFFFF00FF);
-      draw_circle(final_position.x, final_position.y, 2, 0xFF0000FF);
+      // const point_t a = player.pixel_pos;
+      // const point_t b = final_position;
+      // draw_line(a, b, 0xFFFF00FF);
+      // draw_circle(final_position.x, final_position.y, 2, 0xFF0000FF);
+
+      // Removing the fishbowl effect
+      depth *= cos_f32(player.angle - ray_angle);
+
+      const int projection_h = floor_f32_to_i32(screen_dist / depth);
+
+      const rect_t wall_chunk = {i * scale, (SCREEN_H / 2) - (projection_h / 2),
+                                 scale, projection_h};
+
+      draw_rect(wall_chunk, final_color);
     }
   }
 
