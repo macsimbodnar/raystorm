@@ -14,13 +14,16 @@ int32_t ceil_f32_to_i32(float r32);
 float floor_f32(float r32);
 float ceil_f32(float r32);
 float abs_f32(float i);
+float tan_f32(float x);
 int32_t abs_i32(int32_t i);
 float remainder_f32(float numer, float denom);
 
 float sin_f32(float x);
 float cos_f32(float x);
 float squaref(float x);
-
-float squaref(float a);
+float pow_of_two_f32(float a);
 
 float mod_f32(float r32);
+
+float dist_f32(float ax, float ay, float bx, float by, float angle);
+

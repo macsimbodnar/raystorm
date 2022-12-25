@@ -87,3 +87,15 @@ float remainder_f32(float numer, float denom)
   float result = remainder(numer, denom);
   return result;
 }
+
+
+float pow_of_two_f32(float a)
+{
+  return a * a;
+}
+
+
+float dist_f32(float ax, float ay, float bx, float by, float angle)
+{
+  return (bx - ax) * cos(angle) + (by - ay) * sin(angle);
+}
