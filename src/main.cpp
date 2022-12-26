@@ -45,14 +45,21 @@ constexpr char minimap[SCREEN_H / TILE][SCREEN_W / TILE] = {
 };
 // clang-format on
 
+struct point_f32_t
+{
+  float x;
+  float y;
+};
+
 struct player_t
 {
-  point_t pixel_pos;
+  point_f32_t pixel_pos;
   float angle;
 
   point_t tile_pos() const
   {
-    const point_t tile = {pixel_pos.x / TILE, pixel_pos.y / TILE};
+    const point_t tile = {floor_f32_to_i32(pixel_pos.x / TILE),
+                          floor_f32_to_i32(pixel_pos.y / TILE)};
     return tile;
   }
 };
@@ -81,10 +88,10 @@ private:
 
   void ray_cast()
   {
-    const point_t player_pos = player.pixel_pos;
+    const point_f32_t player_pos = player.pixel_pos;
     const point_t player_tile_pos = player.tile_pos();
-    const float screen_dist = SCREEN_W * 20;
-    const int scale = SCREEN_W / NUM_RAYS;
+    const float screen_dist = SCREEN_W * 30;
+    const float scale = SCREEN_W / NUM_RAYS;
     const pixel_t color = 0xFFFFFFFF;
     const uint8_t color_decrement = 10;
 
@@ -114,8 +121,7 @@ private:
       }
 
       const float vertical_y =
-          static_cast<float>(player_pos.y) -
-          (static_cast<float>(player_pos.x) - vertical_x) * tan_a;
+          player_pos.y - (player_pos.x - vertical_x) * tan_a;
 
       float vertical_intersection_X = vertical_x;
       float vertical_intersection_Y = vertical_y;
@@ -182,8 +188,7 @@ private:
       }
 
       const float horizontal_x =
-          static_cast<float>(player_pos.x) -
-          (static_cast<float>(player_pos.y) - horizontal_y) / tan_a;
+          player_pos.x - (player_pos.y - horizontal_y) / tan_a;
 
       float horizontal_intersection_X = horizontal_x;
       float horizontal_intersection_Y = horizontal_y;
@@ -267,8 +272,9 @@ private:
 
       const int projection_h = floor_f32_to_i32(screen_dist / depth);
 
-      const rect_t wall_chunk = {i * scale, (SCREEN_H / 2) - (projection_h / 2),
-                                 scale, projection_h};
+      const rect_t wall_chunk = {round_f32_to_i32(i * scale),
+                                 (SCREEN_H / 2) - (projection_h / 2),
+                                 round_f32_to_i32(scale), projection_h};
 
       draw_rect(wall_chunk, final_color);
     }
@@ -299,12 +305,14 @@ private:
     const pixel_t green = 0x00FF00FF;
     const pixel_t gray = 0x555555FF;
     const point_t tile = player.tile_pos();
+    const point_t player_pos = {round_f32_to_i32(player.pixel_pos.x),
+                                round_f32_to_i32(player.pixel_pos.y)};
 
     // Tile
     draw_rect({(tile.x * TILE) + 1, (tile.y * TILE), TILE - 2, TILE - 2}, gray);
 
     // Direction
-    const point_t a = {player.pixel_pos.x, player.pixel_pos.y};
+    const point_t a = {player_pos.x, player_pos.y};
     const point_t b = {
         round_f32_to_i32(player.pixel_pos.x + SCREEN_W * cos_f32(player.angle)),
         round_f32_to_i32(player.pixel_pos.y +
@@ -313,7 +321,7 @@ private:
     draw_line(a, b, 0xFF0000FF);
 
     // Body
-    draw_circle(player.pixel_pos.x, player.pixel_pos.y, 10, green);
+    draw_circle(player_pos.x, player_pos.y, 10, green);
 
     // Print angle
     const texture_t angle = create_text("A: " + STR(player.angle), 0xFF0000FF);
@@ -321,9 +329,10 @@ private:
   }
 
 
-  bool player_legal_move(int x, int y)
+  bool player_legal_move(float x, float y)
   {
-    const point_t tile = {x / TILE, y / TILE};
+    const point_t tile = {round_f32_to_i32(x) / TILE,
+                          round_f32_to_i32(y) / TILE};
 
     return (minimap[tile.y][tile.x] == 1) ? false : true;
   }
@@ -360,9 +369,8 @@ private:
     }
 
     // TODO(max): Normalize direction to avoid the diagonal to be faster
-
-    int dest_x = player.pixel_pos.x + round_f32_to_i32(dx);
-    int dest_y = player.pixel_pos.y + round_f32_to_i32(dy);
+    const float dest_x = player.pixel_pos.x + dx;
+    const float dest_y = player.pixel_pos.y + dy;
 
     if (player_legal_move(dest_x, dest_y)) {
       player.pixel_pos.x = dest_x;
@@ -393,16 +401,16 @@ private:
   {
     clear_screen(0x00000000);
 
-    draw_2d_map();
+    // draw_2d_map();
     ray_cast();
-    draw_2d_player();
+    // draw_2d_player();
 
     draw_fps();
   }
 
   void on_init(void*) override
   {
-    player.pixel_pos = {400, 300};
+    player.pixel_pos = {400, 400};
     player.angle = -1.5708;  // 90 degrees
   }
 
