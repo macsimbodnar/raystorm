@@ -12,7 +12,7 @@ constexpr float PLAYER_ROTATION_SPEED = 0.000000001;
 
 constexpr float FOW = PI / 3;
 constexpr float HALF_FOW = FOW / 2;
-constexpr int NUM_RAYS = SCREEN_W;
+constexpr int NUM_RAYS = SCREEN_W / 2;
 // constexpr int HALF_NUM_RAYS = NUM_RAYS / 2;
 constexpr float DELTA_ANGLE = FOW / static_cast<float>(NUM_RAYS);
 // constexpr int MAX_DEPTH = 20;
@@ -265,12 +265,14 @@ private:
         depth = horizontal_len;
         final_color = horizontal_color;
 
-        offset = floor_f32_to_i32(horizontal_intersection_X) % TILE;
-
-        if (sin_f32(ray_angle) > 0) {
+        const float sin = sin_f32(ray_angle);
+        if (sin > 0) {
+          offset = TILE - remainder_f32(horizontal_intersection_X, TILE);
+          if (offset > TILE) { offset = offset - TILE; }
         } else {
+          offset = remainder_f32(horizontal_intersection_X, TILE);
+          if (offset < 0) { offset = static_cast<float>(TILE) + offset; }
         }
-
       } else {
         // Vertical is shorter
         final_position = {floor_f32_to_i32(vertical_intersection_X),
@@ -278,12 +280,15 @@ private:
         depth = vertical_len;
         final_color = vertical_color;
 
-        offset = floor_f32_to_i32(vertical_intersection_Y) % TILE;
-        if (cos_f32(ray_angle) > 0) {
+        const float cos = cos_f32(ray_angle);
+        if (cos > 0) {
+          offset = remainder_f32(vertical_intersection_Y, TILE);
+          if (offset < 0) { offset = static_cast<float>(TILE) + offset; }
         } else {
+          offset = TILE - remainder_f32(vertical_intersection_Y, TILE);
+          if (offset > TILE) { offset = offset - TILE; }
         }
       }
-
 
       // Draw 2d Rays
       // const point_t a = player.pixel_pos;
@@ -304,14 +309,9 @@ private:
       // draw_rect(wall_chunk, final_color);
 
       // Draw textured walls
-
-      // texture
-      // num_of_columns_in_tile
-      // size_chunk
-      // int rest_of_tail = TILE - offset;
-      const int multiplier = floor_f32_to_i32(offset) / floor_f32_to_i32(scale);
-      const rect_t wall_chunk = {texture_scale * multiplier, 0,
-                                 floor_f32_to_i32(scale), texture.h};
+      const float multiplier = offset / scale;
+      const rect_t wall_chunk = {floor_f32_to_i32(texture_scale * multiplier),
+                                 0, floor_f32_to_i32(scale), texture.h};
 
       const rect_t draw_position = {
           round_f32_to_i32(i * scale),
@@ -456,7 +456,7 @@ private:
     player.angle = -1.5708;  // 90 degrees
 
     // Load textures
-    textures[1] = load_image("assets/textures/5.png");
+    textures[1] = load_image("assets/textures/2.png");
   }
 
   void on_update(void*) override
