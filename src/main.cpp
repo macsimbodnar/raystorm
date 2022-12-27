@@ -1,4 +1,5 @@
 #include <cassert>
+#include <map>
 #include <pixello.hpp>
 #include "log.hpp"
 #include "math.hpp"
@@ -11,7 +12,7 @@ constexpr float PLAYER_ROTATION_SPEED = 0.000000001;
 
 constexpr float FOW = PI / 3;
 constexpr float HALF_FOW = FOW / 2;
-constexpr int NUM_RAYS = SCREEN_W / 2;
+constexpr int NUM_RAYS = SCREEN_W;
 // constexpr int HALF_NUM_RAYS = NUM_RAYS / 2;
 constexpr float DELTA_ANGLE = FOW / static_cast<float>(NUM_RAYS);
 // constexpr int MAX_DEPTH = 20;
@@ -19,23 +20,23 @@ constexpr float DELTA_ANGLE = FOW / static_cast<float>(NUM_RAYS);
 // clang-format off
 constexpr char minimap[SCREEN_H / TILE][SCREEN_W / TILE] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -68,6 +69,7 @@ class gui_t : public pixello
 {
 private:
   player_t player;
+  std::map<char, texture_t> textures;
 
 public:
   gui_t()
@@ -94,6 +96,10 @@ private:
     const float scale = SCREEN_W / NUM_RAYS;
     const pixel_t color = 0xFFFFFFFF;
     const uint8_t color_decrement = 10;
+
+    const texture_t& texture = textures[1];
+    const int num_of_columns_in_tile = TILE / scale;
+    const int texture_scale = texture.w / num_of_columns_in_tile;
 
     // float ray_angle = player.angle;
     float ray_angle = player.angle - HALF_FOW;
@@ -250,18 +256,36 @@ private:
       point_t final_position;
       float depth;
       pixel_t final_color;
+      float offset;
+
       if (horizontal_len < vertical_len) {
+        // Horizontal is shorter
         final_position = {floor_f32_to_i32(horizontal_intersection_X),
                           floor_f32_to_i32(horizontal_intersection_Y)};
         depth = horizontal_len;
         final_color = horizontal_color;
+
+        offset = floor_f32_to_i32(horizontal_intersection_X) % TILE;
+
+        if (sin_f32(ray_angle) > 0) {
+        } else {
+        }
+
       } else {
+        // Vertical is shorter
         final_position = {floor_f32_to_i32(vertical_intersection_X),
                           floor_f32_to_i32(vertical_intersection_Y)};
         depth = vertical_len;
         final_color = vertical_color;
+
+        offset = floor_f32_to_i32(vertical_intersection_Y) % TILE;
+        if (cos_f32(ray_angle) > 0) {
+        } else {
+        }
       }
 
+
+      // Draw 2d Rays
       // const point_t a = player.pixel_pos;
       // const point_t b = final_position;
       // draw_line(a, b, 0xFFFF00FF);
@@ -272,11 +296,31 @@ private:
 
       const int projection_h = floor_f32_to_i32(screen_dist / depth);
 
-      const rect_t wall_chunk = {round_f32_to_i32(i * scale),
-                                 (SCREEN_H / 2) - (projection_h / 2),
-                                 round_f32_to_i32(scale), projection_h};
+      // const rect_t wall_chunk = {round_f32_to_i32(i * scale),
+      //                            (SCREEN_H / 2) - (projection_h / 2),
+      //                            round_f32_to_i32(scale), projection_h};
 
-      draw_rect(wall_chunk, final_color);
+      // Draw walls
+      // draw_rect(wall_chunk, final_color);
+
+      // Draw textured walls
+
+      // texture
+      // num_of_columns_in_tile
+      // size_chunk
+      // int rest_of_tail = TILE - offset;
+      const int multiplier = floor_f32_to_i32(offset) / floor_f32_to_i32(scale);
+      const rect_t wall_chunk = {texture_scale * multiplier, 0,
+                                 floor_f32_to_i32(scale), texture.h};
+
+      const rect_t draw_position = {
+          round_f32_to_i32(i * scale),
+          (SCREEN_H / 2) - (projection_h / 2),
+          round_f32_to_i32(scale),
+          projection_h,
+      };
+
+      draw_texture(texture, draw_position, wall_chunk);
     }
   }
 
@@ -399,8 +443,6 @@ private:
 
   void draw()
   {
-    clear_screen(0x00000000);
-
     // draw_2d_map();
     ray_cast();
     // draw_2d_player();
@@ -412,6 +454,9 @@ private:
   {
     player.pixel_pos = {400, 400};
     player.angle = -1.5708;  // 90 degrees
+
+    // Load textures
+    textures[1] = load_image("assets/textures/5.png");
   }
 
   void on_update(void*) override
