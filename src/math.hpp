@@ -26,4 +26,3 @@ float pow_of_two_f32(float a);
 float mod_f32(float r32);
 
 float dist_f32(float ax, float ay, float bx, float by, float angle);
-

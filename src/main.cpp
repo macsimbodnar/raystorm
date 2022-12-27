@@ -13,11 +13,38 @@ constexpr float PLAYER_ROTATION_SPEED = 0.000000001;
 constexpr float FOW = PI / 3;
 constexpr float HALF_FOW = FOW / 2;
 constexpr int NUM_RAYS = SCREEN_W / 2;
-// constexpr int HALF_NUM_RAYS = NUM_RAYS / 2;
 constexpr float DELTA_ANGLE = FOW / static_cast<float>(NUM_RAYS);
-// constexpr int MAX_DEPTH = 20;
+
+const float DARKNESS_MASK_SLOPE = 1.0 * 255 / 1100;
 
 // clang-format off
+// constexpr char minimap[SCREEN_H / TILE][SCREEN_W / TILE] = {
+//     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+//     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
+// };
+
 constexpr char minimap[SCREEN_H / TILE][SCREEN_W / TILE] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -94,8 +121,6 @@ private:
     const point_t player_tile_pos = player.tile_pos();
     const float screen_dist = SCREEN_W * 30;
     const float scale = SCREEN_W / NUM_RAYS;
-    const pixel_t color = 0xFFFFFFFF;
-    const uint8_t color_decrement = 10;
 
     const texture_t& texture = textures[1];
     const int num_of_columns_in_tile = TILE / scale;
@@ -104,8 +129,6 @@ private:
     // float ray_angle = player.angle;
     float ray_angle = player.angle - HALF_FOW;
     for (int i = 0; i < NUM_RAYS; ++i, ray_angle += DELTA_ANGLE) {
-      pixel_t horizontal_color = color;
-      pixel_t vertical_color = color;
       ray_angle = remainder_f32(ray_angle, TAU);
       const float tan_a = tan_f32(ray_angle);
 
@@ -161,16 +184,6 @@ private:
         if (hit) {
           // HIT THE WALL
           break;
-        }
-
-        if (vertical_color.r > color_decrement) {
-          vertical_color.r -= color_decrement;
-        }
-        if (vertical_color.g > color_decrement) {
-          vertical_color.g -= color_decrement;
-        }
-        if (vertical_color.b > color_decrement) {
-          vertical_color.b -= color_decrement;
         }
 
         vertical_intersection_X += vertical_dx;
@@ -233,19 +246,9 @@ private:
 
         horizontal_intersection_X += horizontal_dx;
         horizontal_intersection_Y += horizontal_dy;
-
-        if (horizontal_color.r > color_decrement) {
-          horizontal_color.r -= color_decrement;
-        }
-        if (horizontal_color.g > color_decrement) {
-          horizontal_color.g -= color_decrement;
-        }
-        if (horizontal_color.b > color_decrement) {
-          horizontal_color.b -= color_decrement;
-        }
       }
 
-      // Draw the shorter line:
+      // Select the shorter line:
       float horizontal_len =
           dist_f32(player_pos.x, player_pos.y, horizontal_intersection_X,
                    horizontal_intersection_Y, ray_angle);
@@ -255,7 +258,6 @@ private:
 
       point_t final_position;
       float depth;
-      pixel_t final_color;
       float offset;
 
       if (horizontal_len < vertical_len) {
@@ -263,7 +265,6 @@ private:
         final_position = {floor_f32_to_i32(horizontal_intersection_X),
                           floor_f32_to_i32(horizontal_intersection_Y)};
         depth = horizontal_len;
-        final_color = horizontal_color;
 
         const float sin = sin_f32(ray_angle);
         if (sin > 0) {
@@ -278,7 +279,6 @@ private:
         final_position = {floor_f32_to_i32(vertical_intersection_X),
                           floor_f32_to_i32(vertical_intersection_Y)};
         depth = vertical_len;
-        final_color = vertical_color;
 
         const float cos = cos_f32(ray_angle);
         if (cos > 0) {
@@ -290,25 +290,11 @@ private:
         }
       }
 
-      // Draw 2d Rays
-      // const point_t a = player.pixel_pos;
-      // const point_t b = final_position;
-      // draw_line(a, b, 0xFFFF00FF);
-      // draw_circle(final_position.x, final_position.y, 2, 0xFF0000FF);
-
       // Removing the fishbowl effect
       depth *= cos_f32(player.angle - ray_angle);
 
-      const int projection_h = floor_f32_to_i32(screen_dist / depth);
-
-      // const rect_t wall_chunk = {round_f32_to_i32(i * scale),
-      //                            (SCREEN_H / 2) - (projection_h / 2),
-      //                            round_f32_to_i32(scale), projection_h};
-
-      // Draw walls
-      // draw_rect(wall_chunk, final_color);
-
       // Draw textured walls
+      const int projection_h = floor_f32_to_i32(screen_dist / depth);
       const float multiplier = offset / scale;
       const rect_t wall_chunk = {floor_f32_to_i32(texture_scale * multiplier),
                                  0, floor_f32_to_i32(scale), texture.h};
@@ -321,6 +307,12 @@ private:
       };
 
       draw_texture(texture, draw_position, wall_chunk);
+
+      // Draw dark layer depended o the distance
+      pixel_t dark_mask = 0x000000FF;
+      float darkness = DARKNESS_MASK_SLOPE * depth;
+      dark_mask.a = (darkness < 255) ? round_f32_to_i32(darkness) : 255;
+      draw_rect(draw_position, dark_mask);
     }
   }
 
@@ -443,6 +435,7 @@ private:
 
   void draw()
   {
+    draw_rect({0, SCREEN_H / 2, SCREEN_W, SCREEN_H / 2}, 0x101010FF);
     // draw_2d_map();
     ray_cast();
     // draw_2d_player();
