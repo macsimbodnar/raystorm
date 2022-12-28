@@ -8,7 +8,7 @@
 //  1600×1200, 1856×1392, 1920×1440, and 2048×1536
 constexpr int SCREEN_W = 1024;
 constexpr int SCREEN_H = 768;
-constexpr int TILE = 32;
+constexpr int PIXELS_IN_TILE = 32;
 constexpr float PLAYER_SPEED = 0.0000001;
 constexpr float PLAYER_ROTATION_SPEED = 0.000000001;
 
@@ -17,7 +17,7 @@ constexpr float HALF_FOW = FOW / 2;
 constexpr int NUM_RAYS = SCREEN_W / 2;
 constexpr float DELTA_ANGLE = FOW / static_cast<float>(NUM_RAYS);
 constexpr float SCALE = SCREEN_W / NUM_RAYS;
-constexpr int NUM_OF_COLUMNS_IN_TILE = TILE / SCALE;
+constexpr int NUM_OF_COLUMNS_IN_TILE = PIXELS_IN_TILE / SCALE;
 constexpr float SCREEN_DIST = SCREEN_W * 30;
 
 
@@ -25,8 +25,8 @@ const float DARKNESS_MASK_SLOPE = 1.0 * 255 / 1100;
 
 constexpr int MAP_W = 32;
 constexpr int MAP_H = 24;
-constexpr float MAP_W_IN_PIXELS = MAP_W * TILE;
-constexpr float MAP_H_IN_PIXELS = MAP_H * TILE;
+constexpr float MAP_W_IN_PIXELS = MAP_W * PIXELS_IN_TILE;
+constexpr float MAP_H_IN_PIXELS = MAP_H * PIXELS_IN_TILE;
 
 // clang-format off
 // char minimap[MAP_H][MAP_W] = {
@@ -98,8 +98,8 @@ struct player_t
 
   point_t tile_pos() const
   {
-    const point_t tile = {floor_f32_to_i32(pixel_pos.x / TILE),
-                          floor_f32_to_i32(pixel_pos.y / TILE)};
+    const point_t tile = {floor_f32_to_i32(pixel_pos.x / PIXELS_IN_TILE),
+                          floor_f32_to_i32(pixel_pos.y / PIXELS_IN_TILE)};
     return tile;
   }
 };
@@ -123,7 +123,7 @@ public:
 private:
   point_t tile_to_pixel(const point_t& p)
   {
-    point_t res = {p.x * TILE, p.y * TILE};
+    point_t res = {p.x * PIXELS_IN_TILE, p.y * PIXELS_IN_TILE};
     return res;
   }
 
@@ -148,14 +148,14 @@ private:
       bool facing_right = cos_f32(ray_angle) > 0 ? true : false;
       if (facing_right) {
         // Right
-        vertical_x = (player_tile_pos.x + 1) * TILE;
-        vertical_dx = TILE;
-        vertical_dy = TILE * tan_a;
+        vertical_x = (player_tile_pos.x + 1) * PIXELS_IN_TILE;
+        vertical_dx = PIXELS_IN_TILE;
+        vertical_dy = PIXELS_IN_TILE * tan_a;
       } else {
         // Left
-        vertical_x = player_tile_pos.x * TILE;
-        vertical_dx = -TILE;
-        vertical_dy = -TILE * tan_a;
+        vertical_x = player_tile_pos.x * PIXELS_IN_TILE;
+        vertical_dx = -PIXELS_IN_TILE;
+        vertical_dy = -PIXELS_IN_TILE * tan_a;
       }
 
       const float vertical_y =
@@ -175,8 +175,8 @@ private:
                              floor_f32_to_i32(vertical_intersection_Y)};
 
         vertical_hit = false;
-        int x = tmp.x / TILE;
-        int y = tmp.y / TILE;
+        int x = tmp.x / PIXELS_IN_TILE;
+        int y = tmp.y / PIXELS_IN_TILE;
 
         assert(x >= 0);
         assert(y >= 0);
@@ -217,13 +217,13 @@ private:
       bool facing_up = ray_angle > 0 ? false : true;
 
       if (facing_up) {
-        horizontal_y = player_tile_pos.y * TILE;
-        horizontal_dy = -TILE;
-        horizontal_dx = -TILE / tan_a;
+        horizontal_y = player_tile_pos.y * PIXELS_IN_TILE;
+        horizontal_dy = -PIXELS_IN_TILE;
+        horizontal_dx = -PIXELS_IN_TILE / tan_a;
       } else {
-        horizontal_y = (player_tile_pos.y + 1) * TILE;
-        horizontal_dy = TILE;
-        horizontal_dx = TILE / tan_a;
+        horizontal_y = (player_tile_pos.y + 1) * PIXELS_IN_TILE;
+        horizontal_dy = PIXELS_IN_TILE;
+        horizontal_dx = PIXELS_IN_TILE / tan_a;
       }
 
       const float horizontal_x =
@@ -243,8 +243,8 @@ private:
                              static_cast<int>(horizontal_intersection_Y)};
 
         horizontal_hit = false;
-        int x = tmp.x / TILE;
-        int y = tmp.y / TILE;
+        int x = tmp.x / PIXELS_IN_TILE;
+        int y = tmp.y / PIXELS_IN_TILE;
 
         assert(x >= 0);
         assert(y >= 0);
@@ -297,11 +297,14 @@ private:
 
         const float sin = sin_f32(ray_angle);
         if (sin > 0) {
-          offset = TILE - remainder_f32(horizontal_intersection_X, TILE);
-          if (offset > TILE) { offset = offset - TILE; }
+          offset = PIXELS_IN_TILE -
+                   remainder_f32(horizontal_intersection_X, PIXELS_IN_TILE);
+          if (offset > PIXELS_IN_TILE) { offset = offset - PIXELS_IN_TILE; }
         } else {
-          offset = remainder_f32(horizontal_intersection_X, TILE);
-          if (offset < 0) { offset = static_cast<float>(TILE) + offset; }
+          offset = remainder_f32(horizontal_intersection_X, PIXELS_IN_TILE);
+          if (offset < 0) {
+            offset = static_cast<float>(PIXELS_IN_TILE) + offset;
+          }
         }
 
         final_tile_id = horizontal_tile_id;
@@ -314,11 +317,14 @@ private:
 
         const float cos = cos_f32(ray_angle);
         if (cos > 0) {
-          offset = remainder_f32(vertical_intersection_Y, TILE);
-          if (offset < 0) { offset = static_cast<float>(TILE) + offset; }
+          offset = remainder_f32(vertical_intersection_Y, PIXELS_IN_TILE);
+          if (offset < 0) {
+            offset = static_cast<float>(PIXELS_IN_TILE) + offset;
+          }
         } else {
-          offset = TILE - remainder_f32(vertical_intersection_Y, TILE);
-          if (offset > TILE) { offset = offset - TILE; }
+          offset = PIXELS_IN_TILE -
+                   remainder_f32(vertical_intersection_Y, PIXELS_IN_TILE);
+          if (offset > PIXELS_IN_TILE) { offset = offset - PIXELS_IN_TILE; }
         }
 
         final_tile_id = vertical_tile_id;
@@ -369,7 +375,8 @@ private:
     for (int i = 0; i < MAP_H; ++i) {
       for (int j = 0; j < MAP_W; ++j) {
         if (minimap[i][j] == 1) {
-          const rect_t rect = {j * TILE, i * TILE, TILE, TILE};
+          const rect_t rect = {j * PIXELS_IN_TILE, i * PIXELS_IN_TILE,
+                               PIXELS_IN_TILE, PIXELS_IN_TILE};
           draw_rect_outline(rect, white);
         }
       }
@@ -385,7 +392,9 @@ private:
                                 round_f32_to_i32(player.pixel_pos.y)};
 
     // Tile
-    draw_rect({(tile.x * TILE) + 1, (tile.y * TILE), TILE - 2, TILE - 2}, gray);
+    draw_rect({(tile.x * PIXELS_IN_TILE) + 1, (tile.y * PIXELS_IN_TILE),
+               PIXELS_IN_TILE - 2, PIXELS_IN_TILE - 2},
+              gray);
 
     // Direction
     const point_t a = {player_pos.x, player_pos.y};
@@ -407,8 +416,8 @@ private:
 
   bool player_legal_move(float x, float y)
   {
-    const point_t tile = {round_f32_to_i32(x) / TILE,
-                          round_f32_to_i32(y) / TILE};
+    const point_t tile = {round_f32_to_i32(x) / PIXELS_IN_TILE,
+                          round_f32_to_i32(y) / PIXELS_IN_TILE};
 
     return (minimap[tile.y][tile.x] != 0) ? false : true;
   }
