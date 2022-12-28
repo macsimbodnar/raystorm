@@ -4,6 +4,8 @@
 #include "log.hpp"
 #include "math.hpp"
 
+//  640×480, 800×600, 960×720, 1024×768, 1280×960, 1400×1050, 1440×1080 ,
+//  1600×1200, 1856×1392, 1920×1440, and 2048×1536
 constexpr int SCREEN_W = 1024;
 constexpr int SCREEN_H = 768;
 constexpr int TILE = 32;
@@ -14,11 +16,20 @@ constexpr float FOW = PI / 3;
 constexpr float HALF_FOW = FOW / 2;
 constexpr int NUM_RAYS = SCREEN_W / 2;
 constexpr float DELTA_ANGLE = FOW / static_cast<float>(NUM_RAYS);
+constexpr float SCALE = SCREEN_W / NUM_RAYS;
+constexpr int NUM_OF_COLUMNS_IN_TILE = TILE / SCALE;
+constexpr float SCREEN_DIST = SCREEN_W * 30;
+
 
 const float DARKNESS_MASK_SLOPE = 1.0 * 255 / 1100;
 
+constexpr int MAP_W = 32;
+constexpr int MAP_H = 24;
+constexpr float MAP_W_IN_PIXELS = MAP_W * TILE;
+constexpr float MAP_H_IN_PIXELS = MAP_H * TILE;
+
 // clang-format off
-// constexpr char minimap[SCREEN_H / TILE][SCREEN_W / TILE] = {
+// char minimap[MAP_H][MAP_W] = {
 //     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
 //     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
 //     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -45,7 +56,8 @@ const float DARKNESS_MASK_SLOPE = 1.0 * 255 / 1100;
 //     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
 // };
 
-constexpr char minimap[SCREEN_H / TILE][SCREEN_W / TILE] = {
+
+char minimap[MAP_H][MAP_W] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -119,17 +131,15 @@ private:
   {
     const point_f32_t player_pos = player.pixel_pos;
     const point_t player_tile_pos = player.tile_pos();
-    const float screen_dist = SCREEN_W * 30;
-    const float scale = SCREEN_W / NUM_RAYS;
 
     texture_t texture;
-    const int num_of_columns_in_tile = TILE / scale;
 
     // float ray_angle = player.angle;
     float ray_angle = player.angle - HALF_FOW;
     for (int i = 0; i < NUM_RAYS; ++i, ray_angle += DELTA_ANGLE) {
       ray_angle = remainder_f32(ray_angle, TAU);
       const float tan_a = tan_f32(ray_angle);
+      char final_tile_id = 0;
 
       // Vertical
       float vertical_x;
@@ -154,43 +164,44 @@ private:
       float vertical_intersection_X = vertical_x;
       float vertical_intersection_Y = vertical_y;
 
-      char vertical_tile_id;
+      char vertical_tile_id = 0;
 
+      float vertical_hit = false;
       while (vertical_intersection_X >= .0f &&
-             vertical_intersection_X < SCREEN_W &&
+             vertical_intersection_X < MAP_W_IN_PIXELS &&
              vertical_intersection_Y >= .0f &&
-             vertical_intersection_Y < SCREEN_H) {
+             vertical_intersection_Y < MAP_H_IN_PIXELS) {
         const point_t tmp = {floor_f32_to_i32(vertical_intersection_X),
                              floor_f32_to_i32(vertical_intersection_Y)};
 
-        float hit = false;
+        vertical_hit = false;
         int x = tmp.x / TILE;
         int y = tmp.y / TILE;
 
         assert(x >= 0);
         assert(y >= 0);
-        assert(y < SCREEN_H / TILE);
+        assert(y < MAP_H);
 
         if (facing_right) {
           // Right
-          assert(x < SCREEN_W / TILE);
+          assert(x < MAP_W);
           const char tile_id = minimap[y][x];
           if (tile_id != 0) {
-            hit = true;
+            vertical_hit = true;
             vertical_tile_id = tile_id;
           }
 
         } else {
           // Left
-          assert(x - 1 < SCREEN_W / TILE);
+          assert(x - 1 < MAP_W);
           const char tile_id = minimap[y][x - 1];
           if (tile_id != 0) {
-            hit = true;
+            vertical_hit = true;
             vertical_tile_id = tile_id;
           }
         }
 
-        if (hit) {
+        if (vertical_hit) {
           // HIT THE WALL
           break;
         }
@@ -221,44 +232,43 @@ private:
       float horizontal_intersection_X = horizontal_x;
       float horizontal_intersection_Y = horizontal_y;
 
-      char horizontal_tile_id;
+      char horizontal_tile_id = 0;
 
-      int counter = 0;
+      float horizontal_hit = false;
       while (horizontal_intersection_X >= .0f &&
-             horizontal_intersection_X < SCREEN_W &&
+             horizontal_intersection_X < MAP_W_IN_PIXELS &&
              horizontal_intersection_Y >= .0f &&
-             horizontal_intersection_Y < SCREEN_H && counter < 1000) {
-        ++counter;
+             horizontal_intersection_Y < MAP_H_IN_PIXELS) {
         const point_t tmp = {static_cast<int>(horizontal_intersection_X),
                              static_cast<int>(horizontal_intersection_Y)};
 
-        float hit = false;
+        horizontal_hit = false;
         int x = tmp.x / TILE;
         int y = tmp.y / TILE;
 
         assert(x >= 0);
         assert(y >= 0);
-        assert(x < SCREEN_W / TILE);
+        assert(x < MAP_W);
 
         if (facing_up) {
           // Right
-          assert(y - 1 < SCREEN_H / TILE);
+          assert(y - 1 < MAP_H);
           const char tile_id = minimap[y - 1][x];
           if (tile_id != 0) {
-            hit = true;
+            horizontal_hit = true;
             horizontal_tile_id = tile_id;
           }
         } else {
           // Left
-          assert(y < SCREEN_H / TILE);
+          assert(y < MAP_H);
           const char tile_id = minimap[y][x];
           if (tile_id != 0) {
-            hit = true;
+            horizontal_hit = true;
             horizontal_tile_id = tile_id;
           }
         }
 
-        if (hit) {
+        if (horizontal_hit) {
           // HIT THE WALL
           break;
         }
@@ -294,7 +304,8 @@ private:
           if (offset < 0) { offset = static_cast<float>(TILE) + offset; }
         }
 
-        texture = textures[horizontal_tile_id];
+        final_tile_id = horizontal_tile_id;
+
       } else {
         // Vertical is shorter
         final_position = {floor_f32_to_i32(vertical_intersection_X),
@@ -310,23 +321,28 @@ private:
           if (offset > TILE) { offset = offset - TILE; }
         }
 
-        texture = textures[vertical_tile_id];
+        final_tile_id = vertical_tile_id;
       }
+
+
+      assert(final_tile_id <= 5);
+      assert(final_tile_id >= 0);
+      texture = textures[final_tile_id];
 
       // Removing the fishbowl effect
       depth *= cos_f32(player.angle - ray_angle);
 
       // Draw textured walls
-      const int projection_h = floor_f32_to_i32(screen_dist / depth);
-      const float multiplier = offset / scale;
-      const int texture_scale = texture.w / num_of_columns_in_tile;
+      const int projection_h = floor_f32_to_i32(SCREEN_DIST / depth);
+      const float multiplier = offset / SCALE;
+      const int texture_scale = texture.w / NUM_OF_COLUMNS_IN_TILE;
       const rect_t wall_chunk = {floor_f32_to_i32(texture_scale * multiplier),
-                                 0, floor_f32_to_i32(scale), texture.h};
+                                 0, floor_f32_to_i32(SCALE), texture.h};
 
       const rect_t draw_position = {
-          round_f32_to_i32(i * scale),
+          round_f32_to_i32(i * SCALE),
           (SCREEN_H / 2) - (projection_h / 2),
-          round_f32_to_i32(scale),
+          round_f32_to_i32(SCALE),
           projection_h,
       };
 
@@ -350,8 +366,8 @@ private:
   void draw_2d_map()
   {
     const pixel_t white = 0xFFFFFFFF;
-    for (int i = 0; i < SCREEN_H / TILE; ++i) {
-      for (int j = 0; j < SCREEN_W / TILE; ++j) {
+    for (int i = 0; i < MAP_H; ++i) {
+      for (int j = 0; j < MAP_W; ++j) {
         if (minimap[i][j] == 1) {
           const rect_t rect = {j * TILE, i * TILE, TILE, TILE};
           draw_rect_outline(rect, white);
