@@ -11,6 +11,8 @@ constexpr int SCREEN_H = 768;
 constexpr int PIXELS_IN_TILE = 32;
 constexpr float PLAYER_SPEED = 0.0000001;
 constexpr float PLAYER_ROTATION_SPEED = 0.000000001;
+constexpr int PLAYER_SIZE = 16;
+constexpr float PLAYER_HALF_SIZE = static_cast<float>(PLAYER_SIZE) / 2.0f;
 
 constexpr float FOW = PI / 3;
 constexpr float HALF_FOW = FOW / 2;
@@ -406,11 +408,17 @@ private:
     draw_line(a, b, 0xFF0000FF);
 
     // Body
-    draw_circle(player_pos.x, player_pos.y, 10, green);
+    draw_circle(player_pos.x, player_pos.y, PLAYER_SIZE / 2, green);
 
     // Print angle
     const texture_t angle = create_text("A: " + STR(player.angle), 0xFF0000FF);
     draw_texture(angle, 10, 10);
+  }
+
+
+  void draw_background()
+  {
+    draw_rect({0, SCREEN_H / 2, SCREEN_W, SCREEN_H / 2}, 0x101010FF);
   }
 
 
@@ -457,7 +465,24 @@ private:
     const float dest_x = player.pixel_pos.x + dx;
     const float dest_y = player.pixel_pos.y + dy;
 
-    if (player_legal_move(dest_x, dest_y)) {
+    // Add player body size
+    // TODO(max): Fix the collision with something that works properly
+    float x_to_test;
+    float y_to_test;
+
+    if (dx > 0) {
+      x_to_test = dest_x + PLAYER_HALF_SIZE;
+    } else {
+      x_to_test = dest_x - PLAYER_HALF_SIZE;
+    }
+
+    if (dy > 0) {
+      y_to_test = dest_y + PLAYER_HALF_SIZE;
+    } else {
+      y_to_test = dest_y - PLAYER_HALF_SIZE;
+    }
+
+    if (player_legal_move(x_to_test, y_to_test)) {
       player.pixel_pos.x = dest_x;
       player.pixel_pos.y = dest_y;
     }
@@ -477,13 +502,12 @@ private:
 
   void update() { update_player_pos(); }
 
-
   void draw()
   {
-    draw_rect({0, SCREEN_H / 2, SCREEN_W, SCREEN_H / 2}, 0x101010FF);
+    draw_background();
     // draw_2d_map();
-    ray_cast();
     // draw_2d_player();
+    ray_cast();
 
     draw_fps();
   }
