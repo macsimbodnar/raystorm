@@ -11,6 +11,7 @@ constexpr int SCREEN_H = 768;
 constexpr int PIXELS_IN_TILE = 32;
 constexpr float PLAYER_SPEED = 0.0000001;
 constexpr float PLAYER_ROTATION_SPEED = 0.000000001;
+constexpr float MOUSE_SENSITIVITY = 0.0000000003;
 constexpr int PLAYER_SIZE = 16;
 constexpr float PLAYER_HALF_SIZE = static_cast<float>(PLAYER_SIZE) / 2.0f;
 
@@ -418,6 +419,32 @@ private:
 
   void draw_background()
   {
+    // Draw sky
+    const texture_t& t = textures[-1];
+
+    const float shifted_player_angle = player.angle + (TAU / 2);
+
+    // Scale the range of player angle to the range of the texture width
+    const int texture_cut_point = floor_f32_to_i32(
+        shifted_player_angle * (static_cast<float>(t.w) / TAU));
+
+    if (texture_cut_point + SCREEN_W > t.w) {
+      // LEFT
+      const rect_t crop_l = {texture_cut_point, 0, t.w - texture_cut_point,
+                             SCREEN_H / 2};
+      const rect_t dest_rect_l = {0, 0, crop_l.w, SCREEN_H / 2};
+      draw_texture(t, dest_rect_l, crop_l);
+      // RIGHT
+      const rect_t crop_r = {0, 0, SCREEN_W - crop_l.w, SCREEN_H / 2};
+      const rect_t dest_rect_r = {crop_l.w, 0, crop_r.w, SCREEN_H / 2};
+      draw_texture(t, dest_rect_r, crop_r);
+    } else {
+      const rect_t crop = {texture_cut_point, 0, SCREEN_W, SCREEN_H / 2};
+      const rect_t dest_rect = {0, 0, SCREEN_W, SCREEN_H / 2};
+      draw_texture(t, dest_rect, crop);
+    }
+
+    // Floor
     draw_rect({0, SCREEN_H / 2, SCREEN_W, SCREEN_H / 2}, 0x101010FF);
   }
 
@@ -487,12 +514,17 @@ private:
       player.pixel_pos.y = dest_y;
     }
 
+    // Handle player angle with keys
     if (inputs.left.pressed) {
       player.angle -= PLAYER_ROTATION_SPEED * delta_time();
     }
     if (inputs.right.pressed) {
       player.angle += PLAYER_ROTATION_SPEED * delta_time();
     }
+
+    // Handle player angle with mouse
+    const mouse_t mouse = mouse_state();
+    player.angle += mouse.relative_x * MOUSE_SENSITIVITY * delta_time();
 
     // the angle must be between 0 and 2PI. TAU = 2 * pi
     player.angle = remainder_f32(player.angle, TAU);
@@ -514,6 +546,10 @@ private:
 
   void on_init(void*) override
   {
+    // Hide the mouse
+    // show_mouse(false);
+    mouse_set_FPS_mode(true);
+
     player.pixel_pos = {400, 400};
     player.angle = -1.5708;  // 90 degrees
 
@@ -523,6 +559,7 @@ private:
     textures[3] = load_image("assets/textures/3.png");
     textures[4] = load_image("assets/textures/4.png");
     textures[5] = load_image("assets/textures/5.png");
+    textures[-1] = load_image("assets/textures/sky.png");
   }
 
   void on_update(void*) override
