@@ -469,21 +469,19 @@ private:
     float dx = .0f;
     float dy = .0f;
 
-    const inputs_t inputs = inputs_state();
-
-    if (inputs.w.pressed) {
+    if (is_key_pressed(keycap_t::W)) {
       dx += speed_cos;
       dy += speed_sin;
     }
-    if (inputs.s.pressed) {
+    if (is_key_pressed(keycap_t::S)) {
       dx -= speed_cos;
       dy -= speed_sin;
     }
-    if (inputs.d.pressed) {
+    if (is_key_pressed(keycap_t::D)) {
       dx -= speed_sin;
       dy += speed_cos;
     }
-    if (inputs.a.pressed) {
+    if (is_key_pressed(keycap_t::A)) {
       dx += speed_sin;
       dy -= speed_cos;
     }
@@ -515,10 +513,10 @@ private:
     }
 
     // Handle player angle with keys
-    if (inputs.left.pressed) {
+    if (is_key_pressed(keycap_t::LEFT)) {
       player.angle -= PLAYER_ROTATION_SPEED * delta_time();
     }
-    if (inputs.right.pressed) {
+    if (is_key_pressed(keycap_t::RIGHT)) {
       player.angle += PLAYER_ROTATION_SPEED * delta_time();
     }
 
@@ -530,7 +528,13 @@ private:
     player.angle = remainder_f32(player.angle, TAU);
   }
 
-  void check_events() {}
+  void check_events()
+  {
+    if (is_key_pressed(keycap_t::ESC)) {
+      // Quit the game
+      stop();
+    }
+  }
 
   void update() { update_player_pos(); }
 
