@@ -112,6 +112,8 @@ struct actor_t
 {
   point_f32_t pixel_pos;
   std::string texture_index;
+  float scale;
+  float height_shift;
 
   point_t tile_pos() const
   {
@@ -417,15 +419,15 @@ private:
       if ((-texture_half_w) < screen_x &&
           screen_x < (SCREEN_W + texture_half_w) && norm_dist > 0.5f) {
         // Calculating the projection
-        const float projection = SCREEN_DIST / norm_dist;
+        const float projection = SCREEN_DIST / norm_dist * actor.scale;
         const float projection_w = projection * texture_ration;
         const float projection_h = projection;
 
-        // const rect_t texture_scaled_rect = {0, 0, projection_w,
-        // projection_h};
+        const float h_shift = projection_h * actor.height_shift;
         const int sprite_half_w = floor_f32_to_i32(projection_w / 2);
         const int x = screen_x - sprite_half_w;
-        const int y = (SCREEN_H / 2) - (floor_f32_to_i32(projection_h / 2));
+        const int y =
+            (SCREEN_H / 2) - (floor_f32_to_i32(projection_h / 2)) + h_shift;
 
         const rect_t draw_rect = {x, y, floor_f32_to_i32(projection_w),
                                   floor_f32_to_i32(projection_h)};
@@ -639,7 +641,7 @@ private:
         load_image("assets/sprites/static_sprites/candelabrum.png");
 
     // Init actors
-    const actor_t candelabrum = {{800, 400}, "candelabrum"};
+    const actor_t candelabrum = {{800, 400}, "candelabrum", 0.5f, 0.5f};
     actors.push_back(candelabrum);
 
     // Init player
