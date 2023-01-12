@@ -108,6 +108,36 @@ struct player_t
 };
 
 
+struct drawable_t
+{
+  float depth;
+  texture_t texture;
+  rect_t draw_rect;
+  bool to_clip;
+  rect_t texture_clip;
+
+  drawable_t(const float _depth,
+             const texture_t _texture,
+             const rect_t _draw_rect,
+             const rect_t _texture_clip)
+      : depth(_depth),
+        texture(std::move(_texture)),
+        draw_rect(std::move(_draw_rect)),
+        to_clip(true),
+        texture_clip(std::move(_texture_clip))
+  {}
+
+  drawable_t(const float _depth,
+             const texture_t _texture,
+             const rect_t _draw_rect)
+      : depth(_depth),
+        texture(std::move(_texture)),
+        draw_rect(std::move(_draw_rect)),
+        to_clip(false)
+  {}
+};
+
+
 struct actor_t
 {
   point_f32_t pixel_pos;
@@ -128,6 +158,7 @@ class gui_t : public pixello
 private:
   player_t player;
   std::vector<actor_t> actors;
+  std::vector<drawable_t> drawables;
 
   std::map<char, texture_t> textures;
   std::map<std::string, texture_t> static_sprites;
@@ -371,18 +402,12 @@ private:
           projection_h,
       };
 
-      draw_texture(texture, draw_position, wall_chunk);
-
-      // Draw dark layer depended o the distance
-      pixel_t dark_mask = 0x000000FF;
-      float darkness = DARKNESS_MASK_SLOPE * depth;
-      dark_mask.a = (darkness < 255) ? round_f32_to_i32(darkness) : 255;
-      draw_rect(draw_position, dark_mask);
+      drawables.emplace_back(depth, texture, draw_position, wall_chunk);
     }
   }
 
 
-  void draw_actors()
+  void prepare_to_draw_actors()
   {
     for (const auto& actor : actors) {
       // Calculate the angle that the player looks at the sprite
@@ -432,7 +457,35 @@ private:
         const rect_t draw_rect = {x, y, floor_f32_to_i32(projection_w),
                                   floor_f32_to_i32(projection_h)};
 
-        draw_texture(texture, draw_rect);
+        // drawables.emplace_back(depth, texture, draw_position, wall_chunk);
+        drawables.emplace_back(norm_dist, texture, draw_rect);
+
+        // draw_texture(texture, draw_rect);
+      }
+    }
+  }
+
+
+  void draw_drawables()
+  {
+    // Sort the drawables
+    std::sort(drawables.begin(), drawables.end(),
+              [](const drawable_t& a, const drawable_t& b) {
+                return a.depth > b.depth;
+              });
+
+    // Draw
+    for (const drawable_t& D : drawables) {
+      if (D.to_clip) {
+        draw_texture(D.texture, D.draw_rect, D.texture_clip);
+
+        // Draw dark layer depended o the distance
+        pixel_t dark_mask = 0x000000FF;
+        float darkness = DARKNESS_MASK_SLOPE * D.depth;
+        dark_mask.a = (darkness < 255) ? round_f32_to_i32(darkness) : 255;
+        draw_rect(D.draw_rect, dark_mask);
+      } else {
+        draw_texture(D.texture, D.draw_rect);
       }
     }
   }
@@ -456,6 +509,10 @@ private:
           draw_rect_outline(rect, white);
         }
       }
+    }
+
+    for (const auto &A : actors) {
+      draw_circle(floor_f32_to_i32(A.pixel_pos.x), floor_f32_to_i32(A.pixel_pos.y), 5, 0xFFFF00FF);
     }
   }
 
@@ -613,12 +670,15 @@ private:
 
   void draw()
   {
+    drawables.clear();
+
+    ray_cast();
+    prepare_to_draw_actors();
+
     draw_background();
+    draw_drawables();
     // draw_2d_map();
     // draw_2d_player();
-    ray_cast();
-    draw_actors();
-
     draw_fps();
   }
 
@@ -627,6 +687,7 @@ private:
     // Hide the mouse
     // show_mouse(false);
     mouse_set_FPS_mode(true);
+    drawables.reserve(SCREEN_W * 2);
 
     // Load textures
     textures[1] = load_image("assets/textures/1.png");
@@ -641,7 +702,7 @@ private:
         load_image("assets/sprites/static_sprites/candelabrum.png");
 
     // Init actors
-    const actor_t candelabrum = {{800, 400}, "candelabrum", 0.5f, 0.5f};
+    const actor_t candelabrum = {{90, 90}, "candelabrum", 1.0f, 0.5f};
     actors.push_back(candelabrum);
 
     // Init player
