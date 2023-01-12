@@ -13,12 +13,12 @@ constexpr float PLAYER_SPEED = 0.0000001;
 constexpr float PLAYER_ROTATION_SPEED = 0.000000001;
 constexpr float MOUSE_SENSITIVITY = 0.0000000003;
 constexpr int PLAYER_SIZE = 16;
-constexpr float PLAYER_HALF_SIZE = static_cast<float>(PLAYER_SIZE) / 2.0f;
+constexpr float PLAYER_HALF_SIZE = TO_F32(PLAYER_SIZE) / 2.0f;
 
 constexpr float FOW = PI / 3;
 constexpr float HALF_FOW = FOW / 2;
 constexpr int NUM_RAYS = SCREEN_W / 2;
-constexpr float DELTA_ANGLE = FOW / static_cast<float>(NUM_RAYS);
+constexpr float DELTA_ANGLE = FOW / TO_F32(NUM_RAYS);
 constexpr float SCALE = SCREEN_W / NUM_RAYS;
 constexpr int NUM_OF_COLUMNS_IN_TILE = PIXELS_IN_TILE / SCALE;
 constexpr float SCREEN_DIST = SCREEN_W * 30;
@@ -107,11 +107,29 @@ struct player_t
   }
 };
 
+
+struct actor_t
+{
+  point_f32_t pixel_pos;
+  std::string texture_index;
+
+  point_t tile_pos() const
+  {
+    const point_t tile = {floor_f32_to_i32(pixel_pos.x / PIXELS_IN_TILE),
+                          floor_f32_to_i32(pixel_pos.y / PIXELS_IN_TILE)};
+    return tile;
+  }
+};
+
 class gui_t : public pixello
 {
 private:
   player_t player;
+  std::vector<actor_t> actors;
+
   std::map<char, texture_t> textures;
+  std::map<std::string, texture_t> static_sprites;
+
 
 public:
   gui_t()
@@ -305,9 +323,7 @@ private:
           if (offset > PIXELS_IN_TILE) { offset = offset - PIXELS_IN_TILE; }
         } else {
           offset = remainder_f32(horizontal_intersection_X, PIXELS_IN_TILE);
-          if (offset < 0) {
-            offset = static_cast<float>(PIXELS_IN_TILE) + offset;
-          }
+          if (offset < 0) { offset = TO_F32(PIXELS_IN_TILE) + offset; }
         }
 
         final_tile_id = horizontal_tile_id;
@@ -321,9 +337,7 @@ private:
         const float cos = cos_f32(ray_angle);
         if (cos > 0) {
           offset = remainder_f32(vertical_intersection_Y, PIXELS_IN_TILE);
-          if (offset < 0) {
-            offset = static_cast<float>(PIXELS_IN_TILE) + offset;
-          }
+          if (offset < 0) { offset = TO_F32(PIXELS_IN_TILE) + offset; }
         } else {
           offset = PIXELS_IN_TILE -
                    remainder_f32(vertical_intersection_Y, PIXELS_IN_TILE);
@@ -364,6 +378,63 @@ private:
       draw_rect(draw_position, dark_mask);
     }
   }
+
+
+  void draw_actors()
+  {
+    for (const auto& actor : actors) {
+      // Calculate the angle that the player looks at the sprite
+      const float dx = actor.pixel_pos.x - player.pixel_pos.x;
+      const float dy = actor.pixel_pos.y - player.pixel_pos.y;
+
+      const float theta = atan2_f32(dy, dx);
+
+      // Calculate the difference between the player angle and the theta angle.
+      // This will show how many rays the sprite is shifted from the central ray
+
+      float delta_angle = theta - player.angle;
+
+      // Checks if the sprite is on the opposite side of the player
+      if ((dx > 0 && player.angle > PI) || (dx < 0 && dy < 0)) {
+        delta_angle += TAU;
+      }
+
+      // Set the angle in range of TAU
+      delta_angle = remainder_f32(delta_angle, TAU);
+
+      // Finding the screen X position of the sprite calculating how many rays
+      const float delta_rays = delta_angle / DELTA_ANGLE;
+      const float screen_x = ((NUM_RAYS / 2.0f) + delta_rays) * SCALE;
+
+      const float dist = hypot_f32(dx, dy);
+      const float norm_dist = dist * cos_f32(delta_angle);
+
+      const texture_t& texture = static_sprites[actor.texture_index];
+      const float texture_half_w = texture.w / 2;
+      const float texture_ration = TO_F32(texture.w) / TO_F32(texture.h);
+
+      // We get the projection only if the sprite is in the screen
+      if ((-texture_half_w) < screen_x &&
+          screen_x < (SCREEN_W + texture_half_w) && norm_dist > 0.5f) {
+        // Calculating the projection
+        const float projection = SCREEN_DIST / norm_dist;
+        const float projection_w = projection * texture_ration;
+        const float projection_h = projection;
+
+        // const rect_t texture_scaled_rect = {0, 0, projection_w,
+        // projection_h};
+        const int sprite_half_w = floor_f32_to_i32(projection_w / 2);
+        const int x = screen_x - sprite_half_w;
+        const int y = (SCREEN_H / 2) - (floor_f32_to_i32(projection_h / 2));
+
+        const rect_t draw_rect = {x, y, floor_f32_to_i32(projection_w),
+                                  floor_f32_to_i32(projection_h)};
+
+        draw_texture(texture, draw_rect);
+      }
+    }
+  }
+
 
   void draw_fps()
   {
@@ -425,8 +496,8 @@ private:
     const float shifted_player_angle = player.angle + (TAU / 2);
 
     // Scale the range of player angle to the range of the texture width
-    const int texture_cut_point = floor_f32_to_i32(
-        shifted_player_angle * (static_cast<float>(t.w) / TAU));
+    const int texture_cut_point =
+        floor_f32_to_i32(shifted_player_angle * (TO_F32(t.w) / TAU));
 
     if (texture_cut_point + SCREEN_W > t.w) {
       // LEFT
@@ -544,6 +615,7 @@ private:
     // draw_2d_map();
     // draw_2d_player();
     ray_cast();
+    draw_actors();
 
     draw_fps();
   }
@@ -554,9 +626,6 @@ private:
     // show_mouse(false);
     mouse_set_FPS_mode(true);
 
-    player.pixel_pos = {400, 400};
-    player.angle = -1.5708;  // 90 degrees
-
     // Load textures
     textures[1] = load_image("assets/textures/1.png");
     textures[2] = load_image("assets/textures/2.png");
@@ -564,6 +633,18 @@ private:
     textures[4] = load_image("assets/textures/4.png");
     textures[5] = load_image("assets/textures/5.png");
     textures[-1] = load_image("assets/textures/sky.png");
+
+    // Load static sprites
+    static_sprites["candelabrum"] =
+        load_image("assets/sprites/static_sprites/candelabrum.png");
+
+    // Init actors
+    const actor_t candelabrum = {{800, 400}, "candelabrum"};
+    actors.push_back(candelabrum);
+
+    // Init player
+    player.pixel_pos = {400, 400};
+    player.angle = -1.5708;  // 90 degrees
   }
 
   void on_update(void*) override

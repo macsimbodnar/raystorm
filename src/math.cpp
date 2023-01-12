@@ -3,27 +3,30 @@
 #include <cassert>
 #include <cmath>
 
+#define TO_I32(_X_) static_cast<int32_t>(_X_)
+#define TO_U32(_X_) static_cast<uint32_t>(_X_)
+
 int32_t round_f32_to_i32(float r32)
 {
-  int32_t result = (int32_t)roundf(r32);
+  int32_t result = TO_I32(roundf(r32));
   return result;
 }
 
 uint32_t round_f32_to_u32(float r32)
 {
-  uint32_t result = (uint32_t)roundf(r32);
+  uint32_t result = TO_U32(roundf(r32));
   return result;
 }
 
 int32_t floor_f32_to_i32(float r32)
 {
-  int32_t result = (int32_t)floorf(r32);
+  int32_t result = TO_I32(floorf(r32));
   return result;
 }
 
 int32_t ceil_f32_to_i32(float r32)
 {
-  int32_t result = (int32_t)ceilf(r32);
+  int32_t result = TO_I32(ceilf(r32));
   return result;
 }
 
@@ -41,33 +44,46 @@ float ceil_f32(float r32)
 
 float abs_f32(float i)
 {
-  float result = (float)fabs(i);
+  float result = TO_F32(fabs(i));
   return result;
 }
 
 int32_t abs_i32(int32_t i)
 {
-  int32_t result = (int32_t)abs(i);
+  int32_t result = TO_I32(abs(i));
   return result;
 }
 
 float sin_f32(float x)
 {
-  float result = (float)sin(x);
+  float result = TO_F32(sin(x));
   return result;
 }
 
 float cos_f32(float x)
 {
-  float result = (float)cos(x);
+  float result = TO_F32(cos(x));
   return result;
 }
 
 float tan_f32(float x)
 {
-  float result = (float)tan(x);
+  float result = TO_F32(tan(x));
   return result;
 }
+
+float atan2_f32(float y, float x)
+{
+  float result = TO_F32(atan2(y, x));
+  return result;
+}
+
+float hypot_f32(float x, float y)
+{
+  float result = hypotf(x, y);
+  return result;
+}
+
 
 float squaref(float a)
 {
