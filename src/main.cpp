@@ -27,7 +27,7 @@ constexpr int map_w = 32;
 constexpr int map_h = 24;
 // clang-format off
 char game_map[map_h][map_w] = {
-    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+    {2,2,2,2,5,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -251,19 +251,33 @@ private:
         load_image("assets/sprites/animated_sprites/green_light/3.png");
     sprites["candelabrum_3"] =
         load_image("assets/sprites/animated_sprites/green_light/4.png");
+    sprites["candelabrum_r0"] =
+        load_image("assets/sprites/animated_sprites/red_light/0.png");
+    sprites["candelabrum_r1"] =
+        load_image("assets/sprites/animated_sprites/red_light/1.png");
+    sprites["candelabrum_r2"] =
+        load_image("assets/sprites/animated_sprites/red_light/2.png");
+    sprites["candelabrum_r3"] =
+        load_image("assets/sprites/animated_sprites/red_light/3.png");
+
 
     // Init actors
     actors.emplace_back(
-        31.0f,
-        25.0f,
+        31.0f, 25.0f,
         std::vector<std::string>({"candelabrum_0", "candelabrum_1",
                                   "candelabrum_2", "candelabrum_3"}),
+        1.0f, 0.7f);
+
+    actors.emplace_back(
+        27.0f, 25.0f,
+        std::vector<std::string>({"candelabrum_r0", "candelabrum_r1",
+                                  "candelabrum_r2", "candelabrum_r3"}),
         1.0f, 0.7f);
 
     actors.emplace_back(27.0f, 19.0f, "candelabrum", 1.0f, 0.7f);
 
     // Init player
-    player.position = {27.0f, 25.0f};
+    player.position = {25.0f, 25.0f};
     player.angle = .0f;  // 90 degrees
 
     animation_timer.start();
@@ -355,7 +369,7 @@ private:
 
     // Draw player angle
     const texture_t angle =
-        create_text("ANGEL: " + STR(player.angle), 0x00FF00FF);
+        create_text("ANGLE: " + STR(player.angle), 0x00FF00FF);
     draw_texture(angle, screen_w - angle.w, 2 + fps.h + 2 + player_pos.h + 2);
   }
 
