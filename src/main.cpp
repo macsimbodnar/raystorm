@@ -115,6 +115,7 @@ private:
   const float screen_dist;
   const int ray_column_width;
 
+  bool should_draw_map;
   player_t player;
   std::vector<actor_t> actors;
   std::vector<drawable_t> drawables;
@@ -135,7 +136,8 @@ public:
         num_of_rays(_screen_w / WALL_CHUNK_WIDTH),
         delta_angle(FOV / TO_F32(num_of_rays)),
         screen_dist(_screen_w / 2.0f / tan_f32(HALF_FOV)),
-        ray_column_width(screen_w / num_of_rays)
+        ray_column_width(screen_w / num_of_rays),
+        should_draw_map(false)
   {}
 
 
@@ -169,6 +171,12 @@ private:
       // Quit the game
       stop();
     }
+
+    if (is_key_pressed(keycap_t::M)) {
+      should_draw_map = true;
+    } else {
+      should_draw_map = false;
+    }
   }
 
 
@@ -192,12 +200,16 @@ private:
         load_image("assets/sprites/static_sprites/candelabrum.png");
 
     // Init actors
-    const actor_t candelabrum = {{3.0f, 3.0f}, "candelabrum", 1.0f, 0.5f};
+    const actor_t candelabrum = {{(15.0f * TILE_SIZE) + (TILE_SIZE / 2.0f),
+                                  (12.0f * TILE_SIZE) + (TILE_SIZE / 2.0f)},
+                                 "candelabrum",
+                                 1.0f,
+                                 0.7f};
     actors.push_back(candelabrum);
 
     // Init player
-    player.position = {10.0f, 10.0f};
-    player.angle = 1.5708;  // 90 degrees
+    player.position = {27.0f, 25.0f};
+    player.angle = .0f;  // 90 degrees
   }
 
 
@@ -277,6 +289,12 @@ private:
     const texture_t fps = create_text("FPS: " + STR(FPS()), 0xFF0000FF);
 
     draw_texture(fps, screen_w - fps.w, 2);
+
+    const texture_t player_pos = create_text(
+        "X: " + STR(player.position.x) + " Y: " + STR(player.position.y),
+        0x00FF00FF);
+
+    draw_texture(player_pos, screen_w - player_pos.w, 2 + fps.h + 2);
   }
 
 
@@ -615,23 +633,23 @@ private:
       // Calculate the difference between the player angle and the theta angle.
       // This will show how many rays the sprite is shifted from the central ray
 
-      float delta_angle = theta - player.angle;
+      float actor_delta_angle = theta - player.angle;
 
       // Checks if the sprite is on the opposite side of the player
       if ((dx > 0 && player.angle > PI) || (dx < 0 && dy < 0)) {
-        delta_angle += TAU;
+        actor_delta_angle += TAU;
       }
 
       // Set the angle in range of TAU
-      delta_angle = remainder_f32(delta_angle, TAU);
+      actor_delta_angle = remainder_f32(actor_delta_angle, TAU);
 
       // Finding the screen X position of the sprite calculating how many rays
-      const float delta_rays = delta_angle / delta_angle;
+      const float delta_rays = actor_delta_angle / delta_angle;
       const float screen_x =
           ((num_of_rays / 2.0f) + delta_rays) * ray_column_width;
 
       const float dist = hypot_f32(dx, dy);
-      const float norm_dist = dist * cos_f32(delta_angle);
+      const float norm_dist = dist * cos_f32(actor_delta_angle);
 
       const texture_t& texture = static_sprites[actor.texture_index];
       const float texture_half_w = texture.w / 2;
@@ -654,10 +672,8 @@ private:
         const rect_t draw_rect = {x, y, floor_f32_to_i32(projection_w),
                                   floor_f32_to_i32(projection_h)};
 
-        // drawables.emplace_back(depth, texture, draw_position, wall_chunk);
-        drawables.emplace_back(norm_dist, texture, draw_rect);
-
         // draw_texture(texture, draw_rect);
+        drawables.emplace_back(norm_dist, texture, draw_rect);
       }
     }
   }
@@ -729,8 +745,11 @@ private:
 
     draw_background();
     draw_drawables();
-    draw_2d_map();
-    draw_2d_player();
+
+    if (should_draw_map) {
+      draw_2d_map();
+      draw_2d_player();
+    }
     draw_fps();
   }
 
