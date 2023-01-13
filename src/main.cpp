@@ -136,6 +136,17 @@ struct drawable_t
 };
 
 
+struct weapon_t
+{
+  std::vector<std::string> sprites;
+  std::string sound_name;
+  int current_sprite_index = 0;
+  bool in_fire_animation = false;
+  simple_timer timer;
+  uint64_t animation_dt = 1000 / 10;  // In ms
+};
+
+
 class gui_t : public pixello
 {
 private:
@@ -148,11 +159,14 @@ private:
 
   bool should_draw_map;
   player_t player;
+  weapon_t weapon;
   std::vector<actor_t> actors;
   std::vector<drawable_t> drawables;
 
   std::map<char, texture_t> textures;
   std::map<std::string, texture_t> sprites;
+  std::map<std::string, texture_t> weapon_sprites;
+  std::map<std::string, sound_t> weapon_sounds;
 
   simple_timer animation_timer;
 
@@ -200,9 +214,16 @@ private:
 
   void check_events()
   {
+    const mouse_t mouse = mouse_state();
+
     if (is_key_pressed(keycap_t::ESC)) {
       // Quit the game
       stop();
+    }
+
+    if (is_key_pressed(keycap_t::U)) {
+      // Unlock the mouse
+      mouse_set_FPS_mode(false);
     }
 
     if (is_key_pressed(keycap_t::M)) {
@@ -221,6 +242,36 @@ private:
       }
 
       animation_timer.restart();
+    }
+
+    // Weapon
+
+    // Fire trigger
+    if ((is_key_pressed(keycap_t::SPACE) || mouse.left_button.click) &&
+        !weapon.in_fire_animation) {
+      // Start the sound
+      play_sound(weapon_sounds[weapon.sound_name]);
+
+      // Start the animation
+      weapon.in_fire_animation = true;
+      weapon.timer.start();
+      weapon.current_sprite_index++;
+    }
+
+    // Fire and reload animation
+    if (weapon.in_fire_animation) {
+      if (weapon.timer.get_ticks() > weapon.animation_dt) {
+        const size_t new_index = weapon.current_sprite_index + 1;
+
+        if (new_index >= weapon.sprites.size()) {
+          weapon.timer.stop();
+          weapon.in_fire_animation = false;
+          weapon.current_sprite_index = 0;
+        } else {
+          weapon.current_sprite_index = new_index;
+          weapon.timer.restart();
+        }
+      }
     }
   }
 
@@ -275,6 +326,19 @@ private:
         1.0f, 0.7f);
 
     actors.emplace_back(27.0f, 19.0f, "candelabrum", 1.0f, 0.7f);
+
+    // Weapon
+    weapon_sprites["0"] = load_image("assets/sprites/weapon/shotgun/0.png");
+    weapon_sprites["1"] = load_image("assets/sprites/weapon/shotgun/1.png");
+    weapon_sprites["2"] = load_image("assets/sprites/weapon/shotgun/2.png");
+    weapon_sprites["3"] = load_image("assets/sprites/weapon/shotgun/3.png");
+    weapon_sprites["4"] = load_image("assets/sprites/weapon/shotgun/4.png");
+    weapon_sprites["5"] = load_image("assets/sprites/weapon/shotgun/5.png");
+
+    weapon_sounds["shotgun"] = load_sound("assets/sound/shotgun.wav");
+
+    weapon.sprites = {"0", "1", "2", "3", "4", "5"};
+    weapon.sound_name = "shotgun";
 
     // Init player
     player.position = {25.0f, 25.0f};
@@ -809,6 +873,19 @@ private:
   }
 
 
+  void draw_weapon()
+  {
+    const texture_t& texture =
+        weapon_sprites[weapon.sprites[weapon.current_sprite_index]];
+
+    const int w = texture.w / 3;
+    const int h = texture.h / 3;
+
+    const rect_t r = {(screen_w - w) / 2, screen_h - h, w, h};
+    draw_texture(texture, r);
+  }
+
+
   void draw()
   {
     drawables.clear();
@@ -818,6 +895,7 @@ private:
 
     draw_background();
     draw_drawables();
+    draw_weapon();
 
     if (should_draw_map) {
       draw_2d_map();
