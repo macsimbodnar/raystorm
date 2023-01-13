@@ -7,12 +7,12 @@
 #include "math.hpp"
 
 constexpr float TILE_SIZE = 2.0f;    // In meters
-constexpr float PLAYER_SIZE = 1.0f;  // In meters
+constexpr float PLAYER_SIZE = 0.5f;  // In meters
 constexpr float PLAYER_HALF_SIZE = TO_F32(PLAYER_SIZE) / 2.0f;
 
 constexpr float PLAYER_SPEED = 0.00000001f;  // In meters per second
-constexpr float PLAYER_ROTATION_SPEED = 0.000000001f;
-constexpr float MOUSE_SENSITIVITY = 0.0000000003f;
+constexpr float PLAYER_ROTATION_SPEED = 0.000000003f;
+constexpr float MOUSE_SENSITIVITY = 0.0000000009f;
 
 constexpr float FOV = PI / 3.0f;
 constexpr float HALF_FOV = FOV / 2.0f;
@@ -69,6 +69,7 @@ struct player_t
 {
   point_f32_t position;
   float angle;
+  bool boost = false;
 };
 
 
@@ -164,6 +165,7 @@ private:
   std::vector<drawable_t> drawables;
 
   std::map<char, texture_t> textures;
+  std::map<std::string, music_t> musics;
   std::map<std::string, texture_t> sprites;
   std::map<std::string, texture_t> weapon_sprites;
   std::map<std::string, sound_t> weapon_sounds;
@@ -226,6 +228,12 @@ private:
       mouse_set_FPS_mode(false);
     }
 
+    if (is_key_pressed(keycap_t::LSHIFT)) {
+      player.boost = true;
+    } else {
+      player.boost = false;
+    }
+
     if (is_key_pressed(keycap_t::M)) {
       should_draw_map = true;
     } else {
@@ -283,6 +291,9 @@ private:
     mouse_set_FPS_mode(true);
     drawables.reserve(screen_w * 2);
 
+    // Load musics
+    musics["main"] = load_music("assets/sound/theme.mp3");
+
     // Load textures
     textures[1] = load_image("assets/textures/1.png");
     textures[2] = load_image("assets/textures/2.png");
@@ -310,6 +321,8 @@ private:
         load_image("assets/sprites/animated_sprites/red_light/2.png");
     sprites["candelabrum_r3"] =
         load_image("assets/sprites/animated_sprites/red_light/3.png");
+    sprites["buzzy"] = load_image("assets/index.webp");
+    sprites["max"] = load_image("assets/max.webp");
 
 
     // Init actors
@@ -317,15 +330,18 @@ private:
         31.0f, 25.0f,
         std::vector<std::string>({"candelabrum_0", "candelabrum_1",
                                   "candelabrum_2", "candelabrum_3"}),
-        1.0f, 0.7f);
+        1.8f, 0.2f);
 
     actors.emplace_back(
-        27.0f, 25.0f,
+        40.0f, 25.0f,
         std::vector<std::string>({"candelabrum_r0", "candelabrum_r1",
                                   "candelabrum_r2", "candelabrum_r3"}),
-        1.0f, 0.7f);
+        1.8f, 0.2);
 
-    actors.emplace_back(27.0f, 19.0f, "candelabrum", 1.0f, 0.7f);
+    actors.emplace_back(27.0f, 19.0f, "candelabrum", 1.5f, 0.3f);
+
+    actors.emplace_back(16.5f * 2, 12.5f * 2, "buzzy", 4.0f, -1.0f);
+    // actors.emplace_back(4.0f, 6.0f, "max", 3.0f, .0f);
 
     // Weapon
     weapon_sprites["0"] = load_image("assets/sprites/weapon/shotgun/0.png");
@@ -344,7 +360,9 @@ private:
     player.position = {25.0f, 25.0f};
     player.angle = .0f;  // 90 degrees
 
+    // Start things
     animation_timer.start();
+    // music_do(music_t::PLAY, musics["main"]);
   }
 
 
@@ -352,7 +370,8 @@ private:
   {
     const float sin = sin_f32(player.angle);
     const float cos = cos_f32(player.angle);
-    const float speed = PLAYER_SPEED * delta_time();
+    const float speed =
+        PLAYER_SPEED * delta_time() * (player.boost ? 1.5f : 1.0f);
     const float speed_sin = speed * sin;
     const float speed_cos = speed * cos;
 
@@ -743,9 +762,9 @@ private:
 
 
       const rect_t draw_position = {
-          round_f32_to_i32(i * ray_column_width),
+          floor_f32_to_i32(i * ray_column_width),
           (screen_h / 2) - (projection_h / 2),
-          round_f32_to_i32(ray_column_width),
+          floor_f32_to_i32(ray_column_width),
           projection_h,
       };
 
@@ -918,7 +937,7 @@ private:
 
 int main(int, char**)
 {
-  gui_t gui(1024, 768);
+  gui_t gui(1024, 1024);
 
   if (!gui.run()) { return EXIT_FAILURE; }
 
