@@ -8,23 +8,22 @@
 constexpr float TILE_SIZE = 2.0f;    // In meters
 constexpr float PLAYER_SIZE = 1.0f;  // In meters
 constexpr float PLAYER_HALF_SIZE = TO_F32(PLAYER_SIZE) / 2.0f;
-constexpr float PIXELS_IN_METER = 32;
 
 constexpr float PLAYER_SPEED = 0.00000001f;  // In meters per second
 constexpr float PLAYER_ROTATION_SPEED = 0.000000001f;
 constexpr float MOUSE_SENSITIVITY = 0.0000000003f;
 
-constexpr float FOW = PI / 3.0f;
-constexpr float HALF_FOW = FOW / 2.0f;
-constexpr int WALL_CHUNK_WIDTH = 2;
+constexpr float FOV = PI / 3.0f;
+constexpr float HALF_FOV = FOV / 2.0f;
+constexpr int WALL_CHUNK_WIDTH = 1;
 
-const float DARKNESS_MASK_SLOPE = 1.0f * 255.0f / 1100.0f;
+const float DARKNESS_MASK_SLOPE = 1.0f * 255.0f / 80.0f;
 
 
-constexpr int MAP_W = 32;
-constexpr int MAP_H = 24;
+constexpr int map_w = 32;
+constexpr int map_h = 24;
 // clang-format off
-char game_map[MAP_H][MAP_W] = {
+char game_map[map_h][map_w] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -113,9 +112,8 @@ private:
   const int screen_h;
   const int num_of_rays;
   const float delta_angle;
-  const float draw_scale;
   const float screen_dist;
-  const int num_of_columns_in_tile;
+  const int ray_column_width;
 
   player_t player;
   std::vector<actor_t> actors;
@@ -123,9 +121,6 @@ private:
 
   std::map<char, texture_t> textures;
   std::map<std::string, texture_t> static_sprites;
-
-  int map_w;
-  int map_h;
 
 public:
   gui_t(const int _screen_w, const int _screen_h)
@@ -138,10 +133,9 @@ public:
         screen_w(_screen_w),
         screen_h(_screen_h),
         num_of_rays(_screen_w / WALL_CHUNK_WIDTH),
-        delta_angle(FOW / TO_F32(num_of_rays)),
-        draw_scale(_screen_w / num_of_rays),
-        screen_dist(_screen_w * 30),
-        num_of_columns_in_tile(PIXELS_IN_METER / draw_scale)
+        delta_angle(FOV / TO_F32(num_of_rays)),
+        screen_dist(_screen_w / 2.0f / tan_f32(HALF_FOV)),
+        ray_column_width(screen_w / num_of_rays)
   {}
 
 
@@ -182,7 +176,7 @@ private:
   {
     // Hide the mouse
     // show_mouse(false);
-    // mouse_set_FPS_mode(true);
+    mouse_set_FPS_mode(true);
     drawables.reserve(screen_w * 2);
 
     // Load textures
@@ -202,8 +196,8 @@ private:
     actors.push_back(candelabrum);
 
     // Init player
-    player.position = {3.0f, 3.0f};
-    player.angle = -1.5708;  // 90 degrees
+    player.position = {10.0f, 10.0f};
+    player.angle = 1.5708;  // 90 degrees
   }
 
 
@@ -290,6 +284,8 @@ private:
   {
     constexpr int PIXELS_IN_TILE = 32;
 
+    // LOG_I << "H: " << map_h << " W:" << map_w << END_I;
+
     const pixel_t white = 0xFFFFFFFF;
     for (int i = 0; i < map_h; ++i) {
       for (int j = 0; j < map_w; ++j) {
@@ -345,18 +341,34 @@ private:
   }
 
 
+  void draw_2d_ray(const float x, const float y)
+  {
+    constexpr int PIXELS_IN_TILE = 32;
+
+    const point_t a = {
+        round_f32_to_i32(player.position.x / TILE_SIZE * PIXELS_IN_TILE),
+        round_f32_to_i32(player.position.y / TILE_SIZE * PIXELS_IN_TILE)};
+    const point_t b = {round_f32_to_i32(x / TILE_SIZE * PIXELS_IN_TILE),
+                       round_f32_to_i32(y / TILE_SIZE * PIXELS_IN_TILE)};
+
+    // LOG_I << "PLAYER  X:" << a.x << " Y:" << a.y << END_I;
+    // LOG_I << "INTERS  X:" << b.x << " Y:" << b.y << END_I;
+
+    draw_line(a, b, 0x00FFFFFF);
+  }
+
+
   void ray_cast()
   {
     const point_f32_t player_pos = player.position;
     const point_t player_tile_pos = pos_to_tile(player_pos);
     const float x_limit = map_w * TILE_SIZE;
     const float y_limit = map_h * TILE_SIZE;
-    const int PIXELS_IN_TILE = 32;
 
     texture_t texture;
 
     // float ray_angle = player.angle;
-    float ray_angle = player.angle - HALF_FOW;
+    float ray_angle = player.angle - HALF_FOV;
     for (int i = 0; i < num_of_rays; ++i, ray_angle += delta_angle) {
       ray_angle = remainder_f32(ray_angle, TAU);
       const float tan_a = tan_f32(ray_angle);
@@ -369,14 +381,14 @@ private:
       bool facing_right = cos_f32(ray_angle) > 0 ? true : false;
       if (facing_right) {
         // Right
-        vertical_x = (player_tile_pos.x + 1) * PIXELS_IN_TILE;
-        vertical_dx = PIXELS_IN_TILE;
-        vertical_dy = PIXELS_IN_TILE * tan_a;
+        vertical_x = (player_tile_pos.x + 1) * TILE_SIZE;
+        vertical_dx = TILE_SIZE;
+        vertical_dy = TILE_SIZE * tan_a;
       } else {
         // Left
-        vertical_x = player_tile_pos.x * PIXELS_IN_TILE;
-        vertical_dx = -PIXELS_IN_TILE;
-        vertical_dy = -PIXELS_IN_TILE * tan_a;
+        vertical_x = player_tile_pos.x * TILE_SIZE;
+        vertical_dx = -TILE_SIZE;
+        vertical_dy = -TILE_SIZE * tan_a;
       }
 
       const float vertical_y =
@@ -391,12 +403,11 @@ private:
       while (
           vertical_intersection_X >= .0f && vertical_intersection_X < x_limit &&
           vertical_intersection_Y >= .0f && vertical_intersection_Y < y_limit) {
-        const point_t tmp = {floor_f32_to_i32(vertical_intersection_X),
-                             floor_f32_to_i32(vertical_intersection_Y)};
+        // Iterating over tiles until hit the wall
 
         vertical_hit = false;
-        int x = tmp.x / PIXELS_IN_TILE;
-        int y = tmp.y / PIXELS_IN_TILE;
+        const int x = floor_f32_to_i32(vertical_intersection_X) / TILE_SIZE;
+        const int y = floor_f32_to_i32(vertical_intersection_Y) / TILE_SIZE;
 
         assert(x >= 0);
         assert(y >= 0);
@@ -405,15 +416,16 @@ private:
         if (facing_right) {
           // Right
           assert(x < map_w);
+
           const char tile_id = game_map[y][x];
           if (tile_id != 0) {
             vertical_hit = true;
             vertical_tile_id = tile_id;
           }
-
         } else {
           // Left
           assert(x - 1 < map_w);
+
           const char tile_id = game_map[y][x - 1];
           if (tile_id != 0) {
             vertical_hit = true;
@@ -423,6 +435,7 @@ private:
 
         if (vertical_hit) {
           // HIT THE WALL
+          // draw_2d_ray(vertical_intersection_X, vertical_intersection_Y);
           break;
         }
 
@@ -437,13 +450,13 @@ private:
       bool facing_up = ray_angle > 0 ? false : true;
 
       if (facing_up) {
-        horizontal_y = player_tile_pos.y * PIXELS_IN_TILE;
-        horizontal_dy = -PIXELS_IN_TILE;
-        horizontal_dx = -PIXELS_IN_TILE / tan_a;
+        horizontal_y = player_tile_pos.y * TILE_SIZE;
+        horizontal_dy = -TILE_SIZE;
+        horizontal_dx = -TILE_SIZE / tan_a;
       } else {
-        horizontal_y = (player_tile_pos.y + 1) * PIXELS_IN_TILE;
-        horizontal_dy = PIXELS_IN_TILE;
-        horizontal_dx = PIXELS_IN_TILE / tan_a;
+        horizontal_y = (player_tile_pos.y + 1) * TILE_SIZE;
+        horizontal_dy = TILE_SIZE;
+        horizontal_dx = TILE_SIZE / tan_a;
       }
 
       const float horizontal_x =
@@ -459,12 +472,11 @@ private:
              horizontal_intersection_X < x_limit &&
              horizontal_intersection_Y >= .0f &&
              horizontal_intersection_Y < y_limit) {
-        const point_t tmp = {static_cast<int>(horizontal_intersection_X),
-                             static_cast<int>(horizontal_intersection_Y)};
+        // Iterating over tiles until hit the wall
 
         horizontal_hit = false;
-        int x = tmp.x / PIXELS_IN_TILE;
-        int y = tmp.y / PIXELS_IN_TILE;
+        const int x = floor_f32_to_i32(horizontal_intersection_X) / TILE_SIZE;
+        const int y = floor_f32_to_i32(horizontal_intersection_Y) / TILE_SIZE;
 
         assert(x >= 0);
         assert(y >= 0);
@@ -490,6 +502,7 @@ private:
 
         if (horizontal_hit) {
           // HIT THE WALL
+          // draw_2d_ray(horizontal_intersection_X, horizontal_intersection_Y);
           break;
         }
 
@@ -498,10 +511,11 @@ private:
       }
 
       // Select the shorter line:
-      float horizontal_len =
+      const float horizontal_len =
           dist_f32(player_pos.x, player_pos.y, horizontal_intersection_X,
                    horizontal_intersection_Y, ray_angle);
-      float vertical_len =
+
+      const float vertical_len =
           dist_f32(player_pos.x, player_pos.y, vertical_intersection_X,
                    vertical_intersection_Y, ray_angle);
 
@@ -513,16 +527,18 @@ private:
         // Horizontal is shorter
         final_position = {floor_f32_to_i32(horizontal_intersection_X),
                           floor_f32_to_i32(horizontal_intersection_Y)};
+
+        // draw_2d_ray(horizontal_intersection_X, horizontal_intersection_Y);
         depth = horizontal_len;
 
         const float sin = sin_f32(ray_angle);
         if (sin > 0) {
-          offset = PIXELS_IN_TILE -
-                   remainder_f32(horizontal_intersection_X, PIXELS_IN_TILE);
-          if (offset > PIXELS_IN_TILE) { offset = offset - PIXELS_IN_TILE; }
+          offset =
+              TILE_SIZE - remainder_f32(horizontal_intersection_X, TILE_SIZE);
+          if (offset > TILE_SIZE) { offset = offset - TILE_SIZE; }
         } else {
-          offset = remainder_f32(horizontal_intersection_X, PIXELS_IN_TILE);
-          if (offset < 0) { offset = TO_F32(PIXELS_IN_TILE) + offset; }
+          offset = remainder_f32(horizontal_intersection_X, TILE_SIZE);
+          if (offset < 0) { offset = TO_F32(TILE_SIZE) + offset; }
         }
 
         final_tile_id = horizontal_tile_id;
@@ -531,44 +547,118 @@ private:
         // Vertical is shorter
         final_position = {floor_f32_to_i32(vertical_intersection_X),
                           floor_f32_to_i32(vertical_intersection_Y)};
+
+        // draw_2d_ray(vertical_intersection_X, vertical_intersection_Y);
+
         depth = vertical_len;
 
         const float cos = cos_f32(ray_angle);
         if (cos > 0) {
-          offset = remainder_f32(vertical_intersection_Y, PIXELS_IN_TILE);
-          if (offset < 0) { offset = TO_F32(PIXELS_IN_TILE) + offset; }
+          offset = remainder_f32(vertical_intersection_Y, TILE_SIZE);
+          if (offset < 0) { offset = TO_F32(TILE_SIZE) + offset; }
         } else {
-          offset = PIXELS_IN_TILE -
-                   remainder_f32(vertical_intersection_Y, PIXELS_IN_TILE);
-          if (offset > PIXELS_IN_TILE) { offset = offset - PIXELS_IN_TILE; }
+          offset =
+              TILE_SIZE - remainder_f32(vertical_intersection_Y, TILE_SIZE);
+          if (offset > TILE_SIZE) { offset = offset - TILE_SIZE; }
         }
 
         final_tile_id = vertical_tile_id;
       }
 
-
       assert(final_tile_id <= 5);
       assert(final_tile_id >= 0);
+
       texture = textures[final_tile_id];
+
+      assert(texture.w > 0);
+      assert(texture.h > 0);
 
       // Removing the fishbowl effect
       depth *= cos_f32(player.angle - ray_angle);
 
       // Draw textured walls
-      const int projection_h = floor_f32_to_i32(screen_dist / depth);
-      const float multiplier = offset / draw_scale;
-      const int texture_scale = texture.w / num_of_columns_in_tile;
-      const rect_t wall_chunk = {floor_f32_to_i32(texture_scale * multiplier),
-                                 0, floor_f32_to_i32(draw_scale), texture.h};
+
+      // Calculating the current column height
+      const int projection_h =
+          floor_f32_to_i32(screen_dist / depth * TILE_SIZE);
+
+      const float texture_offset = (texture.w * offset) / TILE_SIZE;
+
+      const rect_t wall_chunk = {floor_f32_to_i32(texture_offset), 0,
+                                 floor_f32_to_i32(ray_column_width), texture.h};
+
 
       const rect_t draw_position = {
-          round_f32_to_i32(i * draw_scale),
+          round_f32_to_i32(i * ray_column_width),
           (screen_h / 2) - (projection_h / 2),
-          round_f32_to_i32(draw_scale),
+          round_f32_to_i32(ray_column_width),
           projection_h,
       };
 
+      // draw_texture(texture, draw_position, wall_chunk);
+      // draw_rect(draw_position, 0xFF0000FF);
+
       drawables.emplace_back(depth, texture, draw_position, wall_chunk);
+    }
+  }
+
+
+  void prepare_to_draw_actors()
+  {
+    for (const auto& actor : actors) {
+      // Calculate the angle that the player looks at the sprite
+      const float dx = actor.position.x - player.position.x;
+      const float dy = actor.position.y - player.position.y;
+
+      const float theta = atan2_f32(dy, dx);
+
+      // Calculate the difference between the player angle and the theta angle.
+      // This will show how many rays the sprite is shifted from the central ray
+
+      float delta_angle = theta - player.angle;
+
+      // Checks if the sprite is on the opposite side of the player
+      if ((dx > 0 && player.angle > PI) || (dx < 0 && dy < 0)) {
+        delta_angle += TAU;
+      }
+
+      // Set the angle in range of TAU
+      delta_angle = remainder_f32(delta_angle, TAU);
+
+      // Finding the screen X position of the sprite calculating how many rays
+      const float delta_rays = delta_angle / delta_angle;
+      const float screen_x =
+          ((num_of_rays / 2.0f) + delta_rays) * ray_column_width;
+
+      const float dist = hypot_f32(dx, dy);
+      const float norm_dist = dist * cos_f32(delta_angle);
+
+      const texture_t& texture = static_sprites[actor.texture_index];
+      const float texture_half_w = texture.w / 2;
+      const float texture_ration = TO_F32(texture.w) / TO_F32(texture.h);
+
+      // We get the projection only if the sprite is in the screen
+      if ((-texture_half_w) < screen_x &&
+          screen_x < (screen_w + texture_half_w) && norm_dist > 0.5f) {
+        // Calculating the projection
+        const float projection = screen_dist / norm_dist * actor.scale;
+        const float projection_w = projection * texture_ration;
+        const float projection_h = projection;
+
+        const float h_shift = projection_h * actor.height_shift;
+        const int sprite_half_w = floor_f32_to_i32(projection_w / 2);
+        const int x = screen_x - sprite_half_w;
+        const int y =
+            (screen_h / 2) - (floor_f32_to_i32(projection_h / 2)) + h_shift;
+
+        const rect_t draw_rect = {x, y, floor_f32_to_i32(projection_w),
+                                  floor_f32_to_i32(projection_h)};
+
+        // drawables.emplace_back(depth, texture, draw_position, wall_chunk);
+        drawables.emplace_back(norm_dist, texture, draw_rect);
+
+        // draw_texture(texture, draw_rect);
+      }
     }
   }
 
@@ -635,12 +725,12 @@ private:
     drawables.clear();
 
     ray_cast();
-    // prepare_to_draw_actors();
+    prepare_to_draw_actors();
 
     draw_background();
     draw_drawables();
-    // draw_2d_map();
-    // draw_2d_player();
+    draw_2d_map();
+    draw_2d_player();
     draw_fps();
   }
 
