@@ -2,6 +2,7 @@
 #include <cstring>
 #include <map>
 #include <pixello.hpp>
+#include <vector>
 #include "log.hpp"
 #include "math.hpp"
 
@@ -15,9 +16,11 @@ constexpr float MOUSE_SENSITIVITY = 0.0000000003f;
 
 constexpr float FOV = PI / 3.0f;
 constexpr float HALF_FOV = FOV / 2.0f;
-constexpr int WALL_CHUNK_WIDTH = 1;
+constexpr int WALL_CHUNK_WIDTH = 2;
 
-const float DARKNESS_MASK_SLOPE = 1.0f * 255.0f / 80.0f;
+constexpr float DARKNESS_MASK_SLOPE = 1.0f * 255.0f / 80.0f;
+
+constexpr int ANIMATION_DT = 1000 / 6;  // In ms
 
 
 constexpr int map_w = 32;
@@ -56,6 +59,9 @@ struct point_f32_t
 {
   float x;
   float y;
+
+  point_f32_t() : x(0), y(0) {}
+  point_f32_t(const float _x, const float _y) : x(_x), y(_y) {}
 };
 
 
@@ -69,9 +75,34 @@ struct player_t
 struct actor_t
 {
   point_f32_t position;
-  std::string texture_index;
+  std::vector<std::string> textures;
   float scale;
   float height_shift;
+  int current_texture_index;
+
+  actor_t(const float x,
+          const float y,
+          std::vector<std::string> _textures,
+          const float _scale,
+          const float _height_shift)
+      : position(x, y),
+        textures(std::move(_textures)),
+        scale(_scale),
+        height_shift(_height_shift),
+        current_texture_index(0)
+  {}
+
+  actor_t(const float x,
+          const float y,
+          std::string _texture,
+          const float _scale,
+          const float _height_shift)
+      : position(x, y),
+        textures(std::vector<std::string>({_texture})),
+        scale(_scale),
+        height_shift(_height_shift),
+        current_texture_index(0)
+  {}
 };
 
 
@@ -121,7 +152,9 @@ private:
   std::vector<drawable_t> drawables;
 
   std::map<char, texture_t> textures;
-  std::map<std::string, texture_t> static_sprites;
+  std::map<std::string, texture_t> sprites;
+
+  simple_timer animation_timer;
 
 public:
   gui_t(const int _screen_w, const int _screen_h)
@@ -177,6 +210,18 @@ private:
     } else {
       should_draw_map = false;
     }
+
+    // Perform animations
+    if (animation_timer.get_ticks() > ANIMATION_DT) {
+      // Perform the animation and reset the timer
+
+      for (auto& actor : actors) {
+        actor.current_texture_index =
+            (actor.current_texture_index + 1) % actor.textures.size();
+      }
+
+      animation_timer.restart();
+    }
   }
 
 
@@ -196,20 +241,32 @@ private:
     textures[-1] = load_image("assets/textures/sky.png");
 
     // Load static sprites
-    static_sprites["candelabrum"] =
+    sprites["candelabrum"] =
         load_image("assets/sprites/static_sprites/candelabrum.png");
+    sprites["candelabrum_0"] =
+        load_image("assets/sprites/animated_sprites/green_light/0.png");
+    sprites["candelabrum_1"] =
+        load_image("assets/sprites/animated_sprites/green_light/1.png");
+    sprites["candelabrum_2"] =
+        load_image("assets/sprites/animated_sprites/green_light/3.png");
+    sprites["candelabrum_3"] =
+        load_image("assets/sprites/animated_sprites/green_light/4.png");
 
     // Init actors
-    const actor_t candelabrum = {{(15.0f * TILE_SIZE) + (TILE_SIZE / 2.0f),
-                                  (12.0f * TILE_SIZE) + (TILE_SIZE / 2.0f)},
-                                 "candelabrum",
-                                 1.0f,
-                                 0.7f};
-    actors.push_back(candelabrum);
+    actors.emplace_back(
+        31.0f,
+        25.0f,
+        std::vector<std::string>({"candelabrum_0", "candelabrum_1",
+                                  "candelabrum_2", "candelabrum_3"}),
+        1.0f, 0.7f);
+
+    actors.emplace_back(27.0f, 19.0f, "candelabrum", 1.0f, 0.7f);
 
     // Init player
     player.position = {27.0f, 25.0f};
     player.angle = .0f;  // 90 degrees
+
+    animation_timer.start();
   }
 
 
@@ -286,15 +343,20 @@ private:
 
   void draw_fps()
   {
-    const texture_t fps = create_text("FPS: " + STR(FPS()), 0xFF0000FF);
-
+    // Draw FPS
+    const texture_t fps = create_text("FPS: " + STR(FPS()), 0x00FF00FF);
     draw_texture(fps, screen_w - fps.w, 2);
 
+    // Draw player position
     const texture_t player_pos = create_text(
         "X: " + STR(player.position.x) + " Y: " + STR(player.position.y),
         0x00FF00FF);
-
     draw_texture(player_pos, screen_w - player_pos.w, 2 + fps.h + 2);
+
+    // Draw player angle
+    const texture_t angle =
+        create_text("ANGEL: " + STR(player.angle), 0x00FF00FF);
+    draw_texture(angle, screen_w - angle.w, 2 + fps.h + 2 + player_pos.h + 2);
   }
 
 
@@ -352,10 +414,6 @@ private:
     const int player_size =
         round_f32_to_i32(PLAYER_SIZE / TILE_SIZE * PIXELS_IN_TILE / 2);
     draw_circle(player_screen_pos.x, player_screen_pos.y, player_size, green);
-
-    // Print angle
-    const texture_t angle = create_text("A: " + STR(player.angle), 0xFF0000FF);
-    draw_texture(angle, 10, 10);
   }
 
 
@@ -651,7 +709,8 @@ private:
       const float dist = hypot_f32(dx, dy);
       const float norm_dist = dist * cos_f32(actor_delta_angle);
 
-      const texture_t& texture = static_sprites[actor.texture_index];
+      const texture_t& texture =
+          sprites[actor.textures[actor.current_texture_index]];
       const float texture_half_w = texture.w / 2;
       const float texture_ration = TO_F32(texture.w) / TO_F32(texture.h);
 
