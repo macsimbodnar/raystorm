@@ -3,6 +3,7 @@
 #include <map>
 #include <pixello.hpp>
 #include <vector>
+#include "linked_list.hpp"
 #include "log.hpp"
 #include "math.hpp"
 
@@ -11,7 +12,8 @@ constexpr float PLAYER_SIZE = 0.5f;  // In meters
 constexpr float PLAYER_HALF_SIZE = TO_F32(PLAYER_SIZE) / 2.0f;
 
 constexpr float PLAYER_SPEED = 0.00000001f;  // In meters per second
-constexpr float PLAYER_ROTATION_SPEED = 0.000000003f;
+constexpr float PLAYER_SPEED_BOOSTED = PLAYER_SPEED * 2.0f;
+constexpr float PLAYER_ROTATION_SPEED = 0.0000000025f;
 constexpr float MOUSE_SENSITIVITY = 0.0000000009f;
 
 constexpr float FOV = PI / 3.0f;
@@ -23,10 +25,10 @@ constexpr float DARKNESS_MASK_SLOPE = 1.0f * 255.0f / 80.0f;
 constexpr int ANIMATION_DT = 1000 / 6;  // In ms
 
 
-constexpr int map_w = 32;
-constexpr int map_h = 24;
+constexpr int MAP_W = 32;
+constexpr int MAP_H = 24;
 // clang-format off
-char game_map[map_h][map_w] = {
+char MAP[MAP_H][MAP_W] = {
     {2,2,2,2,5,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -73,37 +75,166 @@ struct player_t
 };
 
 
-struct actor_t
+class animation_t
 {
+public:
+  enum type_t
+  {
+    LOOP,
+    SINGLE
+  };
+
+private:
+  list_t<animation_t*>& animations_list_ref;
+  node_t<animation_t*>* list_pointer;
+  std::vector<std::string> frames;
+  size_t current_animation = 0;
+  simple_timer timer;
+  uint64_t timer_th;
+  bool running;
+  type_t type;
+
+  inline void register_animation()
+  {
+    if (list_pointer == nullptr) {
+      list_pointer = animations_list_ref.insert(this);
+    }
+  }
+
+  inline void unregister_animation()
+  {
+    if (list_pointer != nullptr) {
+      animations_list_ref.erase(list_pointer);
+      list_pointer = nullptr;
+    }
+  }
+
+public:
+  animation_t() = delete;
+  animation_t(const animation_t&) = delete;             // copy constructor
+  animation_t& operator=(const animation_t&) = delete;  // operator =
+  animation_t& operator=(animation_t&&) = delete;       // move
+
+  animation_t(animation_t&& source)
+      : animations_list_ref(source.animations_list_ref),
+        list_pointer(source.list_pointer),
+        frames(source.frames),
+        current_animation(source.current_animation),
+        timer(source.timer),
+        timer_th(source.timer_th),
+        running(source.running),
+        type(source.type)
+  {
+    // LOG_I << "Animation move constructor" << END_I;
+
+    if (list_pointer != nullptr) { list_pointer->value = this; }
+
+    source.list_pointer = nullptr;
+    source.frames.clear();
+    source.timer.stop();
+    source.running = false;
+  }
+
+  explicit animation_t(list_t<animation_t*>& _animations_list,
+                       const std::vector<std::string>& _frames,
+                       const uint64_t _timer_th,
+                       const type_t _type = SINGLE)
+      : animations_list_ref(_animations_list),
+        list_pointer(nullptr),
+        frames(_frames),
+        current_animation(0),
+        timer_th(_timer_th),
+        running(false),
+        type(_type)
+  {
+    // LOG_I << "Animation constructor" << END_I;
+  }
+
+  ~animation_t() { unregister_animation(); }
+
+  inline void start()
+  {
+    if (!running) {
+      // Register the animation
+      register_animation();
+
+      // Start the animation
+      running = true;
+      timer.start();
+    }
+  }
+
+  inline void animate()
+  {
+    if (running && timer.get_ticks() >= timer_th) {
+      current_animation = (current_animation + 1) % frames.size();
+
+      switch (type) {
+        case SINGLE:
+          unregister_animation();
+          running = false;
+          timer.stop();
+          break;
+
+        case LOOP:
+          timer.restart();
+          break;
+      }
+    }
+  }
+
+  inline const std::string& get_frame_id() const
+  {
+    return frames[current_animation];
+  }
+
+  inline bool is_running() const { return running; }
+};
+
+
+class actor_t
+{
+public:
   point_f32_t position;
-  std::vector<std::string> textures;
   float scale;
   float height_shift;
-  int current_texture_index;
 
-  actor_t(const float x,
-          const float y,
-          std::vector<std::string> _textures,
-          const float _scale,
-          const float _height_shift)
+private:
+  animation_t animation;
+
+public:
+  actor_t() = delete;
+  actor_t(const actor_t&) = delete;             // copy constructor
+  actor_t& operator=(const actor_t&) = delete;  // operator =
+  actor_t& operator=(actor_t&&) = delete;       // move
+
+  actor_t(actor_t&& source)
+      : position(source.position),
+        scale(source.scale),
+        height_shift(source.height_shift),
+        animation(std::move(source.animation))
+  {
+    // LOG_I << "Actor move constructor" << END_I;
+  }
+
+  explicit actor_t(const float x,
+                   const float y,
+                   const float _scale,
+                   const float _height_shift,
+                   list_t<animation_t*>& _animations_list,
+                   const std::vector<std::string>& _frames,
+                   const uint64_t _timer_th)
       : position(x, y),
-        textures(std::move(_textures)),
         scale(_scale),
         height_shift(_height_shift),
-        current_texture_index(0)
-  {}
+        animation(_animations_list, _frames, _timer_th, animation_t::LOOP)
+  {
+    // LOG_I << "Actor constructor" << END_I;
+    animation.start();
+  }
 
-  actor_t(const float x,
-          const float y,
-          std::string _texture,
-          const float _scale,
-          const float _height_shift)
-      : position(x, y),
-        textures(std::vector<std::string>({_texture})),
-        scale(_scale),
-        height_shift(_height_shift),
-        current_texture_index(0)
-  {}
+  inline const std::string& sprite() const { return animation.get_frame_id(); }
+  inline void start_animation() { animation.start(); }
 };
 
 
@@ -158,19 +289,23 @@ private:
   const float screen_dist;
   const int ray_column_width;
 
-  bool should_draw_map;
   player_t player;
   weapon_t weapon;
-  std::vector<actor_t> actors;
-  std::vector<drawable_t> drawables;
+  std::vector<actor_t> objects;
 
-  std::map<char, texture_t> textures;
-  std::map<std::string, music_t> musics;
+  list_t<animation_t*> animations;
+  std::vector<drawable_t> to_draw;
+
+  bool should_draw_map;
+  int map_w;
+  int map_h;
+  std::vector<std::vector<char>> game_map;
+
+  std::map<int, texture_t> textures;
   std::map<std::string, texture_t> sprites;
-  std::map<std::string, texture_t> weapon_sprites;
-  std::map<std::string, sound_t> weapon_sounds;
 
-  simple_timer animation_timer;
+  std::map<std::string, music_t> musics;
+  std::map<std::string, sound_t> weapon_sounds;
 
 public:
   gui_t(const int _screen_w, const int _screen_h)
@@ -191,6 +326,22 @@ public:
 
 
 private:
+  inline void load_map(void* m, const size_t w, const size_t h)
+  {
+    map_w = w;
+    map_h = h;
+
+    char(*map)[w] = static_cast<char(*)[w]>(m);
+
+    game_map.resize(h);
+    for (size_t i = 0; i < h; i++) {
+      game_map[i].resize(w);
+      for (size_t j = 0; j < w; j++) {
+        game_map[i][j] = static_cast<char>(map[i][j]);
+      }
+    }
+  }
+
   inline point_t pos_to_tile(const float x, const float y) const
   {
     const point_t tile = {floor_f32_to_i32(x / TILE_SIZE),
@@ -240,16 +391,9 @@ private:
       should_draw_map = false;
     }
 
-    // Perform animations
-    if (animation_timer.get_ticks() > ANIMATION_DT) {
-      // Perform the animation and reset the timer
-
-      for (auto& actor : actors) {
-        actor.current_texture_index =
-            (actor.current_texture_index + 1) % actor.textures.size();
-      }
-
-      animation_timer.restart();
+    // Perform all the animations
+    for (auto A : animations) {
+      A->animate();
     }
 
     // Weapon
@@ -288,13 +432,17 @@ private:
   {
     // Hide the mouse
     // show_mouse(false);
-    mouse_set_FPS_mode(true);
-    drawables.reserve(screen_w * 2);
+    // mouse_set_FPS_mode(true);
+    to_draw.reserve(screen_w * 2);
+
+    // Load map
+    load_map(MAP, MAP_W, MAP_H);
 
     // Load musics
     musics["main"] = load_music("assets/sound/theme.mp3");
 
     // Load textures
+    // textures[0] = load_image("assets/molesta.webp");
     textures[1] = load_image("assets/textures/1.png");
     textures[2] = load_image("assets/textures/2.png");
     textures[3] = load_image("assets/textures/3.png");
@@ -321,39 +469,41 @@ private:
         load_image("assets/sprites/animated_sprites/red_light/2.png");
     sprites["candelabrum_r3"] =
         load_image("assets/sprites/animated_sprites/red_light/3.png");
-    sprites["buzzy"] = load_image("assets/index.webp");
-    sprites["max"] = load_image("assets/max.webp");
+    sprites["buzzy"] = load_image("assets/sprites/buzzy.webp");
 
 
-    // Init actors
-    actors.emplace_back(
-        31.0f, 25.0f,
+    // Init objects
+    objects.reserve(100);
+    objects.emplace_back(
+        31.0f, 25.0f, 1.8f, 0.2f, animations,
         std::vector<std::string>({"candelabrum_0", "candelabrum_1",
                                   "candelabrum_2", "candelabrum_3"}),
-        1.8f, 0.2f);
+        ANIMATION_DT);
 
-    actors.emplace_back(
-        40.0f, 25.0f,
+    objects.emplace_back(
+        40.0f, 25.0f, 1.8f, 0.2, animations,
         std::vector<std::string>({"candelabrum_r0", "candelabrum_r1",
                                   "candelabrum_r2", "candelabrum_r3"}),
-        1.8f, 0.2);
+        ANIMATION_DT);
 
-    actors.emplace_back(27.0f, 19.0f, "candelabrum", 1.5f, 0.3f);
+    objects.emplace_back(27.0f, 19.0f, 1.5f, 0.3f, animations,
+                         std::vector<std::string>({"candelabrum"}), 0);
 
-    actors.emplace_back(16.5f * 2, 12.5f * 2, "buzzy", 4.0f, -1.0f);
-    // actors.emplace_back(4.0f, 6.0f, "max", 3.0f, .0f);
+    objects.emplace_back(16.5f * 2, 12.5f * 2, 4.0f, -1.0f, animations,
+                         std::vector<std::string>({"buzzy"}), 0);
 
     // Weapon
-    weapon_sprites["0"] = load_image("assets/sprites/weapon/shotgun/0.png");
-    weapon_sprites["1"] = load_image("assets/sprites/weapon/shotgun/1.png");
-    weapon_sprites["2"] = load_image("assets/sprites/weapon/shotgun/2.png");
-    weapon_sprites["3"] = load_image("assets/sprites/weapon/shotgun/3.png");
-    weapon_sprites["4"] = load_image("assets/sprites/weapon/shotgun/4.png");
-    weapon_sprites["5"] = load_image("assets/sprites/weapon/shotgun/5.png");
+    sprites["shotgun_0"] = load_image("assets/sprites/weapon/shotgun/0.png");
+    sprites["shotgun_1"] = load_image("assets/sprites/weapon/shotgun/1.png");
+    sprites["shotgun_2"] = load_image("assets/sprites/weapon/shotgun/2.png");
+    sprites["shotgun_3"] = load_image("assets/sprites/weapon/shotgun/3.png");
+    sprites["shotgun_4"] = load_image("assets/sprites/weapon/shotgun/4.png");
+    sprites["shotgun_5"] = load_image("assets/sprites/weapon/shotgun/5.png");
 
     weapon_sounds["shotgun"] = load_sound("assets/sound/shotgun.wav");
 
-    weapon.sprites = {"0", "1", "2", "3", "4", "5"};
+    weapon.sprites = {"shotgun_0", "shotgun_1", "shotgun_2",
+                      "shotgun_3", "shotgun_4", "shotgun_5"};
     weapon.sound_name = "shotgun";
 
     // Init player
@@ -361,8 +511,7 @@ private:
     player.angle = .0f;  // 90 degrees
 
     // Start things
-    animation_timer.start();
-    // music_do(music_t::PLAY, musics["main"]);
+    music_do(music_t::PLAY, musics["main"]);
   }
 
 
@@ -371,7 +520,7 @@ private:
     const float sin = sin_f32(player.angle);
     const float cos = cos_f32(player.angle);
     const float speed =
-        PLAYER_SPEED * delta_time() * (player.boost ? 1.5f : 1.0f);
+        delta_time() * (player.boost ? PLAYER_SPEED_BOOSTED : PLAYER_SPEED);
     const float speed_sin = speed * sin;
     const float speed_cos = speed * cos;
 
@@ -474,7 +623,7 @@ private:
       }
     }
 
-    for (const auto& A : actors) {
+    for (const auto& A : objects) {
       const float x = A.position.x / TILE_SIZE * PIXELS_IN_TILE;
       const float y = A.position.y / TILE_SIZE * PIXELS_IN_TILE;
       draw_circle(floor_f32_to_i32(x), floor_f32_to_i32(y), 5, 0xFFFF00FF);
@@ -675,7 +824,8 @@ private:
 
         if (horizontal_hit) {
           // HIT THE WALL
-          // draw_2d_ray(horizontal_intersection_X, horizontal_intersection_Y);
+          // draw_2d_ray(horizontal_intersection_X,
+          // horizontal_intersection_Y);
           break;
         }
 
@@ -771,22 +921,23 @@ private:
       // draw_texture(texture, draw_position, wall_chunk);
       // draw_rect(draw_position, 0xFF0000FF);
 
-      drawables.emplace_back(depth, texture, draw_position, wall_chunk);
+      to_draw.emplace_back(depth, texture, draw_position, wall_chunk);
     }
   }
 
 
   void prepare_to_draw_actors()
   {
-    for (const auto& actor : actors) {
+    for (const auto& actor : objects) {
       // Calculate the angle that the player looks at the sprite
       const float dx = actor.position.x - player.position.x;
       const float dy = actor.position.y - player.position.y;
 
       const float theta = atan2_f32(dy, dx);
 
-      // Calculate the difference between the player angle and the theta angle.
-      // This will show how many rays the sprite is shifted from the central ray
+      // Calculate the difference between the player angle and the theta
+      // angle. This will show how many rays the sprite is shifted from the
+      // central ray
 
       float actor_delta_angle = theta - player.angle;
 
@@ -806,8 +957,7 @@ private:
       const float dist = hypot_f32(dx, dy);
       const float norm_dist = dist * cos_f32(actor_delta_angle);
 
-      const texture_t& texture =
-          sprites[actor.textures[actor.current_texture_index]];
+      const texture_t& texture = sprites[actor.sprite()];
       const float texture_half_w = texture.w / 2;
       const float texture_ration = TO_F32(texture.w) / TO_F32(texture.h);
 
@@ -829,7 +979,7 @@ private:
                                   floor_f32_to_i32(projection_h)};
 
         // draw_texture(texture, draw_rect);
-        drawables.emplace_back(norm_dist, texture, draw_rect);
+        to_draw.emplace_back(norm_dist, texture, draw_rect);
       }
     }
   }
@@ -869,14 +1019,14 @@ private:
 
   void draw_drawables()
   {
-    // Sort the drawables
-    std::sort(drawables.begin(), drawables.end(),
+    // Sort the to_draw
+    std::sort(to_draw.begin(), to_draw.end(),
               [](const drawable_t& a, const drawable_t& b) {
                 return a.depth > b.depth;
               });
 
     // Draw
-    for (const drawable_t& D : drawables) {
+    for (const drawable_t& D : to_draw) {
       if (D.to_clip) {
         draw_texture(D.texture, D.draw_rect, D.texture_clip);
 
@@ -895,7 +1045,7 @@ private:
   void draw_weapon()
   {
     const texture_t& texture =
-        weapon_sprites[weapon.sprites[weapon.current_sprite_index]];
+        sprites[weapon.sprites[weapon.current_sprite_index]];
 
     const int w = texture.w / 3;
     const int h = texture.h / 3;
@@ -907,7 +1057,7 @@ private:
 
   void draw()
   {
-    drawables.clear();
+    to_draw.clear();
 
     ray_cast();
     prepare_to_draw_actors();
