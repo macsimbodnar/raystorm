@@ -268,14 +268,36 @@ struct drawable_t
 };
 
 
-struct weapon_t
+class weapon_t
 {
-  std::vector<std::string> sprites;
+private:
+  std::map<std::string, animation_t*> animations;
+  std::string current_animation;
+
+public:
+  ~weapon_t()
+  {
+    for (auto I : animations) {
+      delete I.second;
+    }
+  }
+
   std::string sound_name;
-  int current_sprite_index = 0;
-  bool in_fire_animation = false;
-  simple_timer timer;
-  uint64_t animation_dt = 1000 / 10;  // In ms
+
+  inline void add_animation(list_t<animation_t*>& animations_list,
+                            const std::vector<std::string>& frames,
+                            const uint64_t timer_th)
+  {
+    animations["fire"] = new animation_t(animations_list, frames, timer_th);
+  }
+
+  inline const std::string& sprite()
+  {
+    return animations[current_animation]->get_frame_id();
+  }
+
+  inline void start_fire_animation() { animations["fire"]->start(); }
+  inline bool is_in_animation() { return animations["fire"]->is_running(); }
 };
 
 
@@ -322,10 +344,33 @@ public:
         screen_dist(_screen_w / 2.0f / tan_f32(HALF_FOV)),
         ray_column_width(screen_w / num_of_rays),
         should_draw_map(false)
-  {}
+  {
+    objects.reserve(1000);
+    to_draw.reserve(screen_w * 2);
+  }
 
 
 private:
+  inline void add_static_object(const float x,
+                                const float y,
+                                const float scale,
+                                const float offset,
+                                const std::string& sprite)
+  {
+    objects.emplace_back(x, y, scale, offset, animations,
+                         std::vector<std::string>({sprite}), 0);
+  }
+
+  inline void add_animated_object(const float x,
+                                  const float y,
+                                  const float scale,
+                                  const float offset,
+                                  const std::vector<std::string>& sprites)
+  {
+    objects.emplace_back(x, y, scale, offset, animations, sprites,
+                         ANIMATION_DT);
+  }
+
   inline void load_map(void* m, const size_t w, const size_t h)
   {
     map_w = w;
@@ -391,49 +436,26 @@ private:
       should_draw_map = false;
     }
 
-    // Perform all the animations
-    for (auto A : animations) {
-      A->animate();
-    }
-
     // Weapon
-
-    // Fire trigger
     if ((is_key_pressed(keycap_t::SPACE) || mouse.left_button.click) &&
-        !weapon.in_fire_animation) {
+        !weapon.is_in_animation()) {
       // Start the sound
       play_sound(weapon_sounds[weapon.sound_name]);
 
       // Start the animation
-      weapon.in_fire_animation = true;
-      weapon.timer.start();
-      weapon.current_sprite_index++;
+      weapon.start_fire_animation();
     }
 
-    // Fire and reload animation
-    if (weapon.in_fire_animation) {
-      if (weapon.timer.get_ticks() > weapon.animation_dt) {
-        const size_t new_index = weapon.current_sprite_index + 1;
-
-        if (new_index >= weapon.sprites.size()) {
-          weapon.timer.stop();
-          weapon.in_fire_animation = false;
-          weapon.current_sprite_index = 0;
-        } else {
-          weapon.current_sprite_index = new_index;
-          weapon.timer.restart();
-        }
-      }
+    // Perform all the animations
+    for (auto A : animations) {
+      A->animate();
     }
   }
 
 
   void on_init(void*) override
   {
-    // Hide the mouse
-    // show_mouse(false);
     // mouse_set_FPS_mode(true);
-    to_draw.reserve(screen_w * 2);
 
     // Load map
     load_map(MAP, MAP_W, MAP_H);
@@ -442,7 +464,6 @@ private:
     musics["main"] = load_music("assets/sound/theme.mp3");
 
     // Load textures
-    // textures[0] = load_image("assets/molesta.webp");
     textures[1] = load_image("assets/textures/1.png");
     textures[2] = load_image("assets/textures/2.png");
     textures[3] = load_image("assets/textures/3.png");
@@ -471,26 +492,17 @@ private:
         load_image("assets/sprites/animated_sprites/red_light/3.png");
     sprites["buzzy"] = load_image("assets/sprites/buzzy.webp");
 
-
     // Init objects
-    objects.reserve(100);
-    objects.emplace_back(
-        31.0f, 25.0f, 1.8f, 0.2f, animations,
-        std::vector<std::string>({"candelabrum_0", "candelabrum_1",
-                                  "candelabrum_2", "candelabrum_3"}),
-        ANIMATION_DT);
+    add_animated_object(
+        31.0f, 25.0f, 1.8f, 0.2f,
+        {"candelabrum_0", "candelabrum_1", "candelabrum_2", "candelabrum_3"});
 
-    objects.emplace_back(
-        40.0f, 25.0f, 1.8f, 0.2, animations,
-        std::vector<std::string>({"candelabrum_r0", "candelabrum_r1",
-                                  "candelabrum_r2", "candelabrum_r3"}),
-        ANIMATION_DT);
+    add_animated_object(40.0f, 25.0f, 1.8f, 0.2,
+                        {"candelabrum_r0", "candelabrum_r1", "candelabrum_r2",
+                         "candelabrum_r3"});
 
-    objects.emplace_back(27.0f, 19.0f, 1.5f, 0.3f, animations,
-                         std::vector<std::string>({"candelabrum"}), 0);
-
-    objects.emplace_back(16.5f * 2, 12.5f * 2, 4.0f, -1.0f, animations,
-                         std::vector<std::string>({"buzzy"}), 0);
+    add_static_object(27.0f, 19.0f, 1.5f, 0.3f, "candelabrum");
+    add_static_object(16.5f * 2, 12.5f * 2, 4.0f, -1.0f, "buzzy");
 
     // Weapon
     sprites["shotgun_0"] = load_image("assets/sprites/weapon/shotgun/0.png");
@@ -502,16 +514,18 @@ private:
 
     weapon_sounds["shotgun"] = load_sound("assets/sound/shotgun.wav");
 
-    weapon.sprites = {"shotgun_0", "shotgun_1", "shotgun_2",
-                      "shotgun_3", "shotgun_4", "shotgun_5"};
     weapon.sound_name = "shotgun";
+    weapon.add_animation(animations,
+                         {"shotgun_0", "shotgun_1", "shotgun_2", "shotgun_3",
+                          "shotgun_4", "shotgun_5"},
+                         1000 / 10);
 
     // Init player
     player.position = {25.0f, 25.0f};
-    player.angle = .0f;  // 90 degrees
+    player.angle = .0f;
 
     // Start things
-    music_do(music_t::PLAY, musics["main"]);
+    // music_do(music_t::PLAY, musics["main"]);
   }
 
 
@@ -1044,8 +1058,7 @@ private:
 
   void draw_weapon()
   {
-    const texture_t& texture =
-        sprites[weapon.sprites[weapon.current_sprite_index]];
+    const texture_t& texture = sprites[weapon.sprite()];
 
     const int w = texture.w / 3;
     const int h = texture.h / 3;
