@@ -3,7 +3,6 @@
 #include <map>
 #include <pixello.hpp>
 #include <vector>
-#include "linked_list.hpp"
 #include "log.hpp"
 #include "math.hpp"
 
@@ -80,161 +79,168 @@ class animation_t
 public:
   enum type_t
   {
-    LOOP,
-    SINGLE
+    SINGLE,
+    LOOP
   };
 
 private:
-  list_t<animation_t*>& animations_list_ref;
-  node_t<animation_t*>* list_pointer;
   std::vector<std::string> frames;
-  size_t current_animation = 0;
+  size_t current_animation_id = 0;
   simple_timer timer;
   uint64_t timer_th;
   bool running;
   type_t type;
 
-  inline void register_animation()
-  {
-    if (list_pointer == nullptr) {
-      list_pointer = animations_list_ref.insert(this);
-    }
-  }
-
-  inline void unregister_animation()
-  {
-    if (list_pointer != nullptr) {
-      animations_list_ref.erase(list_pointer);
-      list_pointer = nullptr;
-    }
-  }
-
 public:
-  animation_t() = delete;
-  animation_t(const animation_t&) = delete;             // copy constructor
-  animation_t& operator=(const animation_t&) = delete;  // operator =
-  animation_t& operator=(animation_t&&) = delete;       // move
-
-  animation_t(animation_t&& source)
-      : animations_list_ref(source.animations_list_ref),
-        list_pointer(source.list_pointer),
-        frames(source.frames),
-        current_animation(source.current_animation),
-        timer(source.timer),
-        timer_th(source.timer_th),
-        running(source.running),
-        type(source.type)
-  {
-    // LOG_I << "Animation move constructor" << END_I;
-
-    if (list_pointer != nullptr) { list_pointer->value = this; }
-
-    source.list_pointer = nullptr;
-    source.frames.clear();
-    source.timer.stop();
-    source.running = false;
-  }
-
-  explicit animation_t(list_t<animation_t*>& _animations_list,
-                       const std::vector<std::string>& _frames,
-                       const uint64_t _timer_th,
-                       const type_t _type = SINGLE)
-      : animations_list_ref(_animations_list),
-        list_pointer(nullptr),
-        frames(_frames),
-        current_animation(0),
+  animation_t() {}
+  animation_t(const std::vector<std::string>& _frames,
+              const uint64_t _timer_th,
+              const type_t _type = SINGLE)
+      : frames(_frames),
+        current_animation_id(0),
         timer_th(_timer_th),
         running(false),
         type(_type)
+  {}
+
+  inline void start_animation()
   {
-    // LOG_I << "Animation constructor" << END_I;
+    timer.start();
+    running = true;
   }
 
-  ~animation_t() { unregister_animation(); }
-
-  inline void start()
+  inline void stop_animation()
   {
-    if (!running) {
-      // Register the animation
-      register_animation();
+    running = false;
+    timer.stop();
+    current_animation_id = 0;
+  }
 
-      // Start the animation
-      running = true;
-      timer.start();
-    }
+  inline bool is_animation_running() const { return running; }
+
+  inline const std::string& sprite() const
+  {
+    return frames[current_animation_id];
   }
 
   inline void animate()
   {
     if (running && timer.get_ticks() >= timer_th) {
-      current_animation = (current_animation + 1) % frames.size();
+      timer.restart();
+      const size_t new_animation_id = current_animation_id + 1;
+      const size_t num_frames = frames.size();
 
       switch (type) {
-        case SINGLE:
-          unregister_animation();
-          running = false;
-          timer.stop();
+        case LOOP:
+          current_animation_id = new_animation_id % num_frames;
           break;
 
-        case LOOP:
-          timer.restart();
+        case SINGLE:
+          if (new_animation_id >= num_frames) {
+            running = false;
+            timer.stop();
+            current_animation_id = 0;
+          } else {
+            current_animation_id = new_animation_id;
+          }
+
           break;
       }
+      timer.restart();
     }
   }
-
-  inline const std::string& get_frame_id() const
-  {
-    return frames[current_animation];
-  }
-
-  inline bool is_running() const { return running; }
 };
 
 
-class actor_t
+class base_actor_t
 {
+private:
+  struct animation_and_sound_t
+  {
+    animation_t animation;
+    std::string sound;
+  };
+
+  std::map<std::string, animation_and_sound_t> animations;
+  std::string current_animation;
+
 public:
   point_f32_t position;
   float scale;
   float height_shift;
-
-private:
-  animation_t animation;
+  std::string default_sprite;
 
 public:
-  actor_t() = delete;
-  actor_t(const actor_t&) = delete;             // copy constructor
-  actor_t& operator=(const actor_t&) = delete;  // operator =
-  actor_t& operator=(actor_t&&) = delete;       // move
-
-  actor_t(actor_t&& source)
-      : position(source.position),
-        scale(source.scale),
-        height_shift(source.height_shift),
-        animation(std::move(source.animation))
-  {
-    // LOG_I << "Actor move constructor" << END_I;
-  }
-
-  explicit actor_t(const float x,
-                   const float y,
-                   const float _scale,
-                   const float _height_shift,
-                   list_t<animation_t*>& _animations_list,
-                   const std::vector<std::string>& _frames,
-                   const uint64_t _timer_th)
-      : position(x, y),
+  base_actor_t(const point_f32_t _position,
+               const float _scale,
+               const float _height_shift,
+               const std::string& _default_sprite)
+      : position(_position),
         scale(_scale),
         height_shift(_height_shift),
-        animation(_animations_list, _frames, _timer_th, animation_t::LOOP)
+        default_sprite(_default_sprite)
+  {}
+
+  inline void add_animation(const std::string& animation_name,
+                            const std::vector<std::string>& frames,
+                            const uint64_t timer_th,
+                            const animation_t::type_t type,
+                            const std::string& sound = "")
   {
-    // LOG_I << "Actor constructor" << END_I;
-    animation.start();
+    animations[animation_name] = {{frames, timer_th, type}, sound};
   }
 
-  inline const std::string& sprite() const { return animation.get_frame_id(); }
-  inline void start_animation() { animation.start(); }
+  inline void start_animation(const std::string& animation_name)
+  {
+    stop_animation();
+    current_animation = animation_name;
+    animations[current_animation].animation.start_animation();
+  }
+
+  inline void stop_animation()
+  {
+    animations[current_animation].animation.start_animation();
+    current_animation.clear();
+  }
+
+  inline void animate() { animations[current_animation].animation.animate(); }
+
+  inline const std::string& animation_sound(const std::string& animation_name)
+  {
+    return animations[animation_name].sound;
+  }
+
+  inline const std::string& sprite() const
+  {
+    if (current_animation.empty()) { return default_sprite; }
+
+    return animations.at(current_animation).animation.sprite();
+  }
+};
+
+
+class unanimated_actor : public base_actor_t
+{
+public:
+  unanimated_actor(const float x,
+                   const float y,
+                   const float scale,
+                   const float height_shift,
+                   const std::string& sprite)
+      : base_actor_t({x, y}, scale, height_shift, sprite)
+  {}
+};
+
+
+class animated_actor : public base_actor_t
+{
+public:
+  animated_actor(const float x,
+                 const float y,
+                 const float scale,
+                 const float height_shift)
+      : base_actor_t({x, y}, scale, height_shift, "")
+  {}
 };
 
 
@@ -270,12 +276,8 @@ struct drawable_t
 
 struct weapon_t
 {
-  std::vector<std::string> sprites;
+  animation_t animation;
   std::string sound_name;
-  int current_sprite_index = 0;
-  bool in_fire_animation = false;
-  simple_timer timer;
-  uint64_t animation_dt = 1000 / 10;  // In ms
 };
 
 
@@ -291,9 +293,9 @@ private:
 
   player_t player;
   weapon_t weapon;
-  std::vector<actor_t> objects;
+  std::vector<unanimated_actor> unanimated_actors;
+  std::vector<animated_actor> animated_actors;
 
-  list_t<animation_t*> animations;
   std::vector<drawable_t> to_draw;
 
   bool should_draw_map;
@@ -391,40 +393,25 @@ private:
       should_draw_map = false;
     }
 
-    // Perform all the animations
-    for (auto A : animations) {
-      A->animate();
-    }
-
     // Weapon
 
     // Fire trigger
     if ((is_key_pressed(keycap_t::SPACE) || mouse.left_button.click) &&
-        !weapon.in_fire_animation) {
+        !weapon.animation.is_animation_running()) {
       // Start the sound
       play_sound(weapon_sounds[weapon.sound_name]);
 
       // Start the animation
-      weapon.in_fire_animation = true;
-      weapon.timer.start();
-      weapon.current_sprite_index++;
+      weapon.animation.start_animation();
+    }
+
+    // Perform all the animations
+    for (auto& A : animated_actors) {
+      A.animate();
     }
 
     // Fire and reload animation
-    if (weapon.in_fire_animation) {
-      if (weapon.timer.get_ticks() > weapon.animation_dt) {
-        const size_t new_index = weapon.current_sprite_index + 1;
-
-        if (new_index >= weapon.sprites.size()) {
-          weapon.timer.stop();
-          weapon.in_fire_animation = false;
-          weapon.current_sprite_index = 0;
-        } else {
-          weapon.current_sprite_index = new_index;
-          weapon.timer.restart();
-        }
-      }
-    }
+    if (weapon.animation.is_animation_running()) { weapon.animation.animate(); }
   }
 
 
@@ -471,26 +458,27 @@ private:
         load_image("assets/sprites/animated_sprites/red_light/3.png");
     sprites["buzzy"] = load_image("assets/sprites/buzzy.webp");
 
+    // Add unanimated actors
+    unanimated_actors.reserve(10);
+    unanimated_actors.emplace_back(27.0f, 19.0f, 1.5f, 0.3f, "candelabrum");
+    unanimated_actors.emplace_back(16.5f * 2, 12.5f * 2, 4.0f, -1.0f, "buzzy");
 
-    // Init objects
-    objects.reserve(100);
-    objects.emplace_back(
-        31.0f, 25.0f, 1.8f, 0.2f, animations,
-        std::vector<std::string>({"candelabrum_0", "candelabrum_1",
-                                  "candelabrum_2", "candelabrum_3"}),
-        ANIMATION_DT);
+    // Add animated actors
+    animated_actors.reserve(10);
 
-    objects.emplace_back(
-        40.0f, 25.0f, 1.8f, 0.2, animations,
-        std::vector<std::string>({"candelabrum_r0", "candelabrum_r1",
-                                  "candelabrum_r2", "candelabrum_r3"}),
-        ANIMATION_DT);
+    animated_actors.emplace_back(31.0f, 25.0f, 1.8f, 0.2f);
+    animated_actors.back().add_animation(
+        "default_animation",
+        {"candelabrum_0", "candelabrum_1", "candelabrum_2", "candelabrum_3"},
+        ANIMATION_DT, animation_t::LOOP);
+    animated_actors.back().start_animation("default_animation");
 
-    objects.emplace_back(27.0f, 19.0f, 1.5f, 0.3f, animations,
-                         std::vector<std::string>({"candelabrum"}), 0);
-
-    objects.emplace_back(16.5f * 2, 12.5f * 2, 4.0f, -1.0f, animations,
-                         std::vector<std::string>({"buzzy"}), 0);
+    animated_actors.emplace_back(40.0f, 25.0f, 1.8f, 0.2);
+    animated_actors.back().add_animation("default_animation",
+                                         {"candelabrum_r0", "candelabrum_r1",
+                                          "candelabrum_r2", "candelabrum_r3"},
+                                         ANIMATION_DT, animation_t::LOOP);
+    animated_actors.back().start_animation("default_animation");
 
     // Weapon
     sprites["shotgun_0"] = load_image("assets/sprites/weapon/shotgun/0.png");
@@ -502,8 +490,11 @@ private:
 
     weapon_sounds["shotgun"] = load_sound("assets/sound/shotgun.wav");
 
-    weapon.sprites = {"shotgun_0", "shotgun_1", "shotgun_2",
-                      "shotgun_3", "shotgun_4", "shotgun_5"};
+    weapon.animation = {{"shotgun_0", "shotgun_1", "shotgun_2", "shotgun_3",
+                         "shotgun_4", "shotgun_5"},
+                        1000 / 10,
+                        animation_t::SINGLE};
+
     weapon.sound_name = "shotgun";
 
     // Init player
@@ -623,9 +614,10 @@ private:
       }
     }
 
-    for (const auto& A : objects) {
-      const float x = A.position.x / TILE_SIZE * PIXELS_IN_TILE;
-      const float y = A.position.y / TILE_SIZE * PIXELS_IN_TILE;
+    for (const auto& A : unanimated_actors) {
+      const point_f32_t& pos = A.position;
+      const float x = pos.x / TILE_SIZE * PIXELS_IN_TILE;
+      const float y = pos.y / TILE_SIZE * PIXELS_IN_TILE;
       draw_circle(floor_f32_to_i32(x), floor_f32_to_i32(y), 5, 0xFFFF00FF);
     }
   }
@@ -926,61 +918,73 @@ private:
   }
 
 
-  void prepare_to_draw_actors()
+  void prepare_to_draw_actor(const base_actor_t& actor)
   {
-    for (const auto& actor : objects) {
-      // Calculate the angle that the player looks at the sprite
-      const float dx = actor.position.x - player.position.x;
-      const float dy = actor.position.y - player.position.y;
+    // Calculate the angle that the player looks at the sprite
+    const point_f32_t& postion = actor.position;
+    const float dx = actor.position.x - player.position.x;
+    const float dy = actor.position.y - player.position.y;
 
-      const float theta = atan2_f32(dy, dx);
+    const float theta = atan2_f32(dy, dx);
 
-      // Calculate the difference between the player angle and the theta
-      // angle. This will show how many rays the sprite is shifted from the
-      // central ray
+    // Calculate the difference between the player angle and the theta
+    // angle. This will show how many rays the sprite is shifted from the
+    // central ray
 
-      float actor_delta_angle = theta - player.angle;
+    float actor_delta_angle = theta - player.angle;
 
-      // Checks if the sprite is on the opposite side of the player
-      if ((dx > 0 && player.angle > PI) || (dx < 0 && dy < 0)) {
-        actor_delta_angle += TAU;
-      }
+    // Checks if the sprite is on the opposite side of the player
+    if ((dx > 0 && player.angle > PI) || (dx < 0 && dy < 0)) {
+      actor_delta_angle += TAU;
+    }
 
-      // Set the angle in range of TAU
-      actor_delta_angle = remainder_f32(actor_delta_angle, TAU);
+    // Set the angle in range of TAU
+    actor_delta_angle = remainder_f32(actor_delta_angle, TAU);
 
-      // Finding the screen X position of the sprite calculating how many rays
-      const float delta_rays = actor_delta_angle / delta_angle;
-      const float screen_x =
-          ((num_of_rays / 2.0f) + delta_rays) * ray_column_width;
+    // Finding the screen X position of the sprite calculating how many rays
+    const float delta_rays = actor_delta_angle / delta_angle;
+    const float screen_x =
+        ((num_of_rays / 2.0f) + delta_rays) * ray_column_width;
 
-      const float dist = hypot_f32(dx, dy);
-      const float norm_dist = dist * cos_f32(actor_delta_angle);
+    const float dist = hypot_f32(dx, dy);
+    const float norm_dist = dist * cos_f32(actor_delta_angle);
 
-      const texture_t& texture = sprites[actor.sprite()];
-      const float texture_half_w = texture.w / 2;
-      const float texture_ration = TO_F32(texture.w) / TO_F32(texture.h);
+    const std::string& sprite_name = actor.sprite();
+    const texture_t& texture = sprites[sprite_name];
+    const float texture_half_w = texture.w / 2;
+    const float texture_ration = TO_F32(texture.w) / TO_F32(texture.h);
 
-      // We get the projection only if the sprite is in the screen
-      if ((-texture_half_w) < screen_x &&
-          screen_x < (screen_w + texture_half_w) && norm_dist > 0.5f) {
-        // Calculating the projection
-        const float projection = screen_dist / norm_dist * actor.scale;
-        const float projection_w = projection * texture_ration;
-        const float projection_h = projection;
+    // We get the projection only if the sprite is in the screen
+    if ((-texture_half_w) < screen_x &&
+        screen_x < (screen_w + texture_half_w) && norm_dist > 0.5f) {
+      // Calculating the projection
+      const float projection = screen_dist / norm_dist * actor.scale;
+      const float projection_w = projection * texture_ration;
+      const float projection_h = projection;
 
-        const float h_shift = projection_h * actor.height_shift;
-        const int sprite_half_w = floor_f32_to_i32(projection_w / 2);
-        const int x = screen_x - sprite_half_w;
-        const int y =
-            (screen_h / 2) - (floor_f32_to_i32(projection_h / 2)) + h_shift;
+      const float h_shift = projection_h * actor.height_shift;
+      const int sprite_half_w = floor_f32_to_i32(projection_w / 2);
+      const int x = screen_x - sprite_half_w;
+      const int y =
+          (screen_h / 2) - (floor_f32_to_i32(projection_h / 2)) + h_shift;
 
-        const rect_t draw_rect = {x, y, floor_f32_to_i32(projection_w),
-                                  floor_f32_to_i32(projection_h)};
+      const rect_t draw_rect = {x, y, floor_f32_to_i32(projection_w),
+                                floor_f32_to_i32(projection_h)};
 
-        // draw_texture(texture, draw_rect);
-        to_draw.emplace_back(norm_dist, texture, draw_rect);
-      }
+      // draw_texture(texture, draw_rect);
+      to_draw.emplace_back(norm_dist, texture, draw_rect);
+    }
+  }
+
+
+  void prepare_to_draw_all_actors()
+  {
+    for (const auto& A : unanimated_actors) {
+      prepare_to_draw_actor(A);
+    }
+
+    for (const auto& A : animated_actors) {
+      prepare_to_draw_actor(A);
     }
   }
 
@@ -1044,8 +1048,7 @@ private:
 
   void draw_weapon()
   {
-    const texture_t& texture =
-        sprites[weapon.sprites[weapon.current_sprite_index]];
+    const texture_t& texture = sprites[weapon.animation.sprite()];
 
     const int w = texture.w / 3;
     const int h = texture.h / 3;
@@ -1060,7 +1063,7 @@ private:
     to_draw.clear();
 
     ray_cast();
-    prepare_to_draw_actors();
+    prepare_to_draw_all_actors();
 
     draw_background();
     draw_drawables();
