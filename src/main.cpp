@@ -296,13 +296,15 @@ public:
         pain(false)
   {}
 
-  inline void add_animation(const animation_type_t type,
-                            const std::vector<std::string>& frames,
-                            const uint64_t timer_th,
-                            const std::string& sound)
+  inline void add_animation(
+      const animation_type_t type,
+      const std::vector<std::string>& frames,
+      const uint64_t timer_th,
+      const std::string& sound,
+      const animation_t::type_t animation_loop_type = animation_t::SINGLE)
   {
     base_actor_t::add_animation(std::to_string(type), frames, timer_th,
-                                animation_t::SINGLE, sound);
+                                animation_loop_type, sound);
   }
 
   inline void start_animation(const animation_type_t type)
@@ -653,7 +655,7 @@ private:
         {"soldier_idle_0", "soldier_idle_1", "soldier_idle_2", "soldier_idle_3",
          "soldier_idle_4", "soldier_idle_5", "soldier_idle_6",
          "soldier_idle_7"},
-        ANIMATION_DT, "");
+        ANIMATION_DT, "", animation_t::LOOP);
 
     NPCs.back().add_animation(npc_t::PAIN, {"soldier_pain_0"}, ANIMATION_DT,
                               "soldier_pain");
@@ -662,6 +664,8 @@ private:
                               {"soldier_walk_0", "soldier_walk_1",
                                "soldier_walk_2", "soldier_walk_3"},
                               ANIMATION_DT, "");
+
+    NPCs.back().start_animation(npc_t::IDLE);
 
     // Init player
     player.position = {25.0f, 25.0f};
