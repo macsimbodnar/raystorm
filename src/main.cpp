@@ -1,10 +1,12 @@
 #include <cassert>
+#include <cstdlib>
 #include <cstring>
 #include <map>
 #include <pixello.hpp>
 #include <vector>
 #include "log.hpp"
 #include "math.hpp"
+
 
 constexpr float TILE_SIZE = 2.0f;    // In meters
 constexpr float PLAYER_SIZE = 0.5f;  // In meters
@@ -72,6 +74,13 @@ struct player_t
   float angle;
   bool boost = false;
 };
+
+
+static int rand_between(const int min, const int max)
+{
+  int rand_num = (rand() % (max - min + 1)) + min;
+  return rand_num;
+}
 
 
 class animation_t
@@ -203,7 +212,13 @@ public:
     current_animation.clear();
   }
 
-  inline void animate() { animations[current_animation].animation.animate(); }
+  inline void animate()
+  {
+    animations[current_animation].animation.animate();
+    if (!animations[current_animation].animation.is_animation_running()) {
+      current_animation.clear();
+    }
+  }
 
   inline const std::string& animation_sound(const std::string& animation_name)
   {
@@ -213,34 +228,89 @@ public:
   inline const std::string& sprite() const
   {
     if (current_animation.empty()) { return default_sprite; }
-
     return animations.at(current_animation).animation.sprite();
   }
 };
 
 
-class unanimated_actor : public base_actor_t
+class unanimated_actor_t : public base_actor_t
 {
 public:
-  unanimated_actor(const float x,
-                   const float y,
-                   const float scale,
-                   const float height_shift,
-                   const std::string& sprite)
+  unanimated_actor_t(const float x,
+                     const float y,
+                     const float scale,
+                     const float height_shift,
+                     const std::string& sprite)
       : base_actor_t({x, y}, scale, height_shift, sprite)
   {}
 };
 
 
-class animated_actor : public base_actor_t
+class animated_actor_t : public base_actor_t
 {
 public:
-  animated_actor(const float x,
-                 const float y,
-                 const float scale,
-                 const float height_shift)
+  animated_actor_t(const float x,
+                   const float y,
+                   const float scale,
+                   const float height_shift)
       : base_actor_t({x, y}, scale, height_shift, "")
   {}
+};
+
+
+class npc_t : public base_actor_t
+{
+private:
+  float attack_distance;
+  float speed;
+  float size;
+  float health;
+  float attack_damage;
+  float accuracy;
+  bool alive;
+  bool pain;
+
+public:
+  enum animation_type_t
+  {
+    ATTACK,
+    DEATH,
+    IDLE,
+    PAIN,
+    WALK
+  };
+
+  npc_t(const float x,
+        const float y,
+        const float scale,
+        const float height_shift,
+        const std::string& sprite)
+      : base_actor_t({x, y}, scale, height_shift, sprite),
+        attack_distance(rand_between(3, 6)),
+        speed(0.03f),
+        size(0.5f),
+        health(100),
+        attack_damage(10),
+        accuracy(0.15f),
+        alive(true),
+        pain(false)
+  {}
+
+  inline void add_animation(const animation_type_t type,
+                            const std::vector<std::string>& frames,
+                            const uint64_t timer_th,
+                            const std::string& sound)
+  {
+    base_actor_t::add_animation(std::to_string(type), frames, timer_th,
+                                animation_t::SINGLE, sound);
+  }
+
+  inline void start_animation(const animation_type_t type)
+  {
+    base_actor_t::start_animation(std::to_string(type));
+  }
+
+  inline void update() {}
 };
 
 
@@ -293,8 +363,9 @@ private:
 
   player_t player;
   weapon_t weapon;
-  std::vector<unanimated_actor> unanimated_actors;
-  std::vector<animated_actor> animated_actors;
+  std::vector<unanimated_actor_t> unanimated_actors;
+  std::vector<animated_actor_t> animated_actors;
+  std::vector<npc_t> NPCs;
 
   std::vector<drawable_t> to_draw;
 
@@ -307,7 +378,7 @@ private:
   std::map<std::string, texture_t> sprites;
 
   std::map<std::string, music_t> musics;
-  std::map<std::string, sound_t> weapon_sounds;
+  std::map<std::string, sound_t> sounds;
 
 public:
   gui_t(const int _screen_w, const int _screen_h)
@@ -399,15 +470,24 @@ private:
     if ((is_key_pressed(keycap_t::SPACE) || mouse.left_button.click) &&
         !weapon.animation.is_animation_running()) {
       // Start the sound
-      play_sound(weapon_sounds[weapon.sound_name]);
+      play_sound(sounds[weapon.sound_name]);
 
       // Start the animation
       weapon.animation.start_animation();
+
+      NPCs.back().start_animation(npc_t::DEATH);
     }
 
     // Perform all the animations
+
+    // Actors
     for (auto& A : animated_actors) {
       A.animate();
+    }
+
+    // NPCs
+    for (auto& NPC : NPCs) {
+      NPC.animate();
     }
 
     // Fire and reload animation
@@ -488,7 +568,7 @@ private:
     sprites["shotgun_4"] = load_image("assets/sprites/weapon/shotgun/4.png");
     sprites["shotgun_5"] = load_image("assets/sprites/weapon/shotgun/5.png");
 
-    weapon_sounds["shotgun"] = load_sound("assets/sound/shotgun.wav");
+    sounds["shotgun"] = load_sound("assets/sound/shotgun.wav");
 
     weapon.animation = {{"shotgun_0", "shotgun_1", "shotgun_2", "shotgun_3",
                          "shotgun_4", "shotgun_5"},
@@ -496,6 +576,92 @@ private:
                         animation_t::SINGLE};
 
     weapon.sound_name = "shotgun";
+
+    // NPCs
+    sprites["soldier_default"] = load_image("assets/sprites/npc/soldier/0.png");
+    sprites["soldier_attack_0"] =
+        load_image("assets/sprites/npc/soldier/attack/0.png");
+    sprites["soldier_attack_1"] =
+        load_image("assets/sprites/npc/soldier/attack/1.png");
+    sprites["soldier_death_0"] =
+        load_image("assets/sprites/npc/soldier/death/0.png");
+    sprites["soldier_death_1"] =
+        load_image("assets/sprites/npc/soldier/death/1.png");
+    sprites["soldier_death_2"] =
+        load_image("assets/sprites/npc/soldier/death/2.png");
+    sprites["soldier_death_3"] =
+        load_image("assets/sprites/npc/soldier/death/3.png");
+    sprites["soldier_death_4"] =
+        load_image("assets/sprites/npc/soldier/death/4.png");
+    sprites["soldier_death_5"] =
+        load_image("assets/sprites/npc/soldier/death/5.png");
+    sprites["soldier_death_6"] =
+        load_image("assets/sprites/npc/soldier/death/6.png");
+    sprites["soldier_death_7"] =
+        load_image("assets/sprites/npc/soldier/death/7.png");
+    sprites["soldier_death_8"] =
+        load_image("assets/sprites/npc/soldier/death/8.png");
+    sprites["soldier_idle_0"] =
+        load_image("assets/sprites/npc/soldier/idle/0.png");
+    sprites["soldier_idle_1"] =
+        load_image("assets/sprites/npc/soldier/idle/1.png");
+    sprites["soldier_idle_2"] =
+        load_image("assets/sprites/npc/soldier/idle/2.png");
+    sprites["soldier_idle_3"] =
+        load_image("assets/sprites/npc/soldier/idle/3.png");
+    sprites["soldier_idle_4"] =
+        load_image("assets/sprites/npc/soldier/idle/4.png");
+    sprites["soldier_idle_5"] =
+        load_image("assets/sprites/npc/soldier/idle/5.png");
+    sprites["soldier_idle_6"] =
+        load_image("assets/sprites/npc/soldier/idle/6.png");
+    sprites["soldier_idle_7"] =
+        load_image("assets/sprites/npc/soldier/idle/7.png");
+    sprites["soldier_pain_0"] =
+        load_image("assets/sprites/npc/soldier/pain/0.png");
+    sprites["soldier_walk_0"] =
+        load_image("assets/sprites/npc/soldier/walk/0.png");
+    sprites["soldier_walk_1"] =
+        load_image("assets/sprites/npc/soldier/walk/1.png");
+    sprites["soldier_walk_2"] =
+        load_image("assets/sprites/npc/soldier/walk/2.png");
+    sprites["soldier_walk_3"] =
+        load_image("assets/sprites/npc/soldier/walk/3.png");
+
+    sounds["soldier_attack"] = load_sound("assets/sound/npc_attack.wav");
+    sounds["soldier_death"] = load_sound("assets/sound/npc_death.wav");
+    sounds["soldier_pain"] = load_sound("assets/sound/npc_pain.wav");
+
+    NPCs.emplace_back(4.0f, 4.0f, 1.5f, .3f, "soldier_default");
+    // const animation_type_t type,
+    // const std::vector<std::string>& frames,
+    // const uint64_t timer_th,
+    // const std::string& sound
+    NPCs.back().add_animation(npc_t::ATTACK,
+                              {"soldier_attack_0", "soldier_attack_1"},
+                              ANIMATION_DT, "soldier_attack");
+
+    NPCs.back().add_animation(
+        npc_t::DEATH,
+        {"soldier_death_0", "soldier_death_1", "soldier_death_2",
+         "soldier_death_3", "soldier_death_4", "soldier_death_5",
+         "soldier_death_6", "soldier_death_7", "soldier_death_8"},
+        ANIMATION_DT, "soldier_death");
+
+    NPCs.back().add_animation(
+        npc_t::IDLE,
+        {"soldier_idle_0", "soldier_idle_1", "soldier_idle_2", "soldier_idle_3",
+         "soldier_idle_4", "soldier_idle_5", "soldier_idle_6",
+         "soldier_idle_7"},
+        ANIMATION_DT, "");
+
+    NPCs.back().add_animation(npc_t::PAIN, {"soldier_pain_0"}, ANIMATION_DT,
+                              "soldier_pain");
+
+    NPCs.back().add_animation(npc_t::WALK,
+                              {"soldier_walk_0", "soldier_walk_1",
+                               "soldier_walk_2", "soldier_walk_3"},
+                              ANIMATION_DT, "");
 
     // Init player
     player.position = {25.0f, 25.0f};
@@ -575,6 +741,11 @@ private:
 
     // the angle must be between 0 and 2PI. TAU = 2 * pi
     player.angle = remainder_f32(player.angle, TAU);
+
+    // Update the NPCs
+    for (auto& NPC : NPCs) {
+      NPC.update();
+    }
   }
 
 
@@ -986,6 +1157,10 @@ private:
     for (const auto& A : animated_actors) {
       prepare_to_draw_actor(A);
     }
+
+    for (const auto& A : NPCs) {
+      prepare_to_draw_actor(A);
+    }
   }
 
 
@@ -1090,6 +1265,8 @@ private:
 
 int main(int, char**)
 {
+  srand(time(0));
+
   gui_t gui(1024, 1024);
 
   if (!gui.run()) { return EXIT_FAILURE; }
