@@ -771,30 +771,24 @@ private:
     }
 
     // Update the NPCs
+    const float player_angle_cos = cos_f32(player.angle);
+    const float player_angle_sin = sin_f32(player.angle);
     for (auto& NPC : NPCs) {
       if (NPC.alive) {
         // Check for hits
         if (pulled_trigger) {
           // Calculating if we it the npc using the line and circle formulas
-          // x, y are the npc coordinates
-          // px,py are the player coordinates
-          // A is the player angle
-          // (x - Px) * cos(A) + (y - Py) * sin(A) = d
-          // D is the distance from the center of the circle to the line
-          // We have to compare the d with the npc size
+          // distance = abs((Bx - Px) * sin(A) - (By - Py) * cos(A))
 
-          const float d = abs_f32(
-              (NPC.position.x - player.position.x) * cos_f32(player.angle) +
-              (NPC.position.y - player.position.y) * sin_f32(player.angle));
+          const float distance =
+              abs_f32((NPC.position.x - player.position.x) * player_angle_sin -
+                      (NPC.position.y - player.position.y) * player_angle_cos);
 
-
-          LOG_S << "D: " << d << " size: " << NPC.size << END_S;
-
-          if (d < NPC.size) {
+          if (distance < NPC.size) {
             // We hit the npc
             play_sound(sounds[NPC.animation_sound(npc_t::PAIN)]);
             NPC.start_animation(npc_t::PAIN);
-            // NPC.health -= weapon.damage;
+            NPC.health -= weapon.damage;
           }
 
           // Check if npc is death
@@ -944,7 +938,7 @@ private:
       float vertical_x;
       float vertical_dx;
       float vertical_dy;
-      bool facing_right = cos_f32(ray_angle) > 0 ? true : false;
+      const bool facing_right = cos_f32(ray_angle) > 0 ? true : false;
       if (facing_right) {
         // Right
         vertical_x = (player_tile_pos.x + 1) * TILE_SIZE;
@@ -1013,7 +1007,7 @@ private:
       float horizontal_y;
       float horizontal_dx;
       float horizontal_dy;
-      bool facing_up = ray_angle > 0 ? false : true;
+      const bool facing_up = ray_angle > 0 ? false : true;
 
       if (facing_up) {
         horizontal_y = player_tile_pos.y * TILE_SIZE;

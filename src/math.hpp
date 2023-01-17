@@ -2,10 +2,10 @@
 #include <cstdint>
 
 #define PI (3.14159265359f)
-#define P2 (PIf / 2)
-#define P3 (3 * PIf / 2)
+#define P2 (PI / 2.0f)
+#define P3 (3 * PI / 2.0f)
 #define ONC_DEGREE_IN_RADIANS (0.0174533f)
-#define TAU (2 * PI)
+#define TAU (2.0f * PI)
 #define TO_F32(_X_) static_cast<float>(_X_)
 
 int32_t round_f32_to_i32(float r32);
