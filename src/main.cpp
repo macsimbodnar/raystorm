@@ -270,7 +270,7 @@ public:
   float attack_damage;
   float accuracy;
   bool alive;
-  // bool pain;
+  std::string death_sprite;
 
   enum animation_type_t
   {
@@ -285,7 +285,8 @@ public:
         const float y,
         const float scale,
         const float height_shift,
-        const std::string& sprite)
+        const std::string& sprite,
+        const std::string& _death_sprite)
       : base_actor_t({x, y}, scale, height_shift, sprite),
         attack_distance(rand_between(3, 6)),
         speed(0.03f),
@@ -293,7 +294,8 @@ public:
         health(100),
         attack_damage(10),
         accuracy(0.15f),
-        alive(true)
+        alive(true),
+        death_sprite(_death_sprite)
   {}
 
   inline void add_animation(
@@ -311,7 +313,6 @@ public:
   {
     base_actor_t::start_animation(std::to_string(type));
   }
-
 
   inline const std::string& animation_sound(const animation_type_t type)
   {
@@ -480,7 +481,7 @@ private:
 
     // Reset the pulled trigger and set it in case
     pulled_trigger = false;
-    if ((is_key_pressed(keycap_t::SPACE) || mouse.left_button.click) &&
+    if ((is_key_pressed(keycap_t::SPACE) || mouse.left_button_pressed) &&
         !weapon.animation.is_animation_running()) {
       pulled_trigger = true;
     }
@@ -647,11 +648,9 @@ private:
     sounds["soldier_death"] = load_sound("assets/sound/npc_death.wav");
     sounds["soldier_pain"] = load_sound("assets/sound/npc_pain.wav");
 
-    NPCs.emplace_back(6.0f, 6.0f, 1.5f, .3f, "soldier_default");
-    // const animation_type_t type,
-    // const std::vector<std::string>& frames,
-    // const uint64_t timer_th,
-    // const std::string& sound
+    NPCs.emplace_back(6.0f, 6.0f, 1.5f, .3f, "soldier_default",
+                      "soldier_death_8");
+
     NPCs.back().add_animation(npc_t::ATTACK,
                               {"soldier_attack_0", "soldier_attack_1"},
                               ANIMATION_DT, "soldier_attack");
@@ -682,8 +681,9 @@ private:
 
     // Init player
     // player.position = {25.0f, 25.0f};
-    player.position = {4.0f, 4.0f};
-    player.angle = .0f;  // 90 degrees
+    // player.position = {4.0f, 4.0f};
+    player.position = {4.0f, 15.0f};
+    player.angle = -P2;
 
     // Start things
     // music_do(music_t::PLAY, musics["main"]);
@@ -780,21 +780,31 @@ private:
           // Calculating if we it the npc using the line and circle formulas
           // distance = abs((Bx - Px) * sin(A) - (By - Py) * cos(A))
 
+          const float x_diff = NPC.position.x - player.position.x;
+          const float y_diff = NPC.position.y - player.position.y;
+
           const float distance =
-              abs_f32((NPC.position.x - player.position.x) * player_angle_sin -
-                      (NPC.position.y - player.position.y) * player_angle_cos);
+              abs_f32(x_diff * player_angle_sin - y_diff * player_angle_cos);
 
-          if (distance < NPC.size) {
-            // We hit the npc
-            play_sound(sounds[NPC.animation_sound(npc_t::PAIN)]);
-            NPC.start_animation(npc_t::PAIN);
-            NPC.health -= weapon.damage;
-          }
+          // calculate if the npc is in front or back of the player
+          const float angle_between = atan2_f32(y_diff, x_diff);
+          const float angle_difference = abs_f32(angle_between - player.angle);
+          const bool is_in_front = angle_difference > P2 ? false : true;
 
-          // Check if npc is death
-          if (NPC.health <= .0f) {
-            NPC.alive = false;
-            NPC.start_animation(npc_t::DEATH);
+          if (is_in_front) {
+            if (distance < NPC.size / 2) {
+              // We hit the npc
+              play_sound(sounds[NPC.animation_sound(npc_t::PAIN)]);
+              NPC.start_animation(npc_t::PAIN);
+              NPC.health -= weapon.damage;
+            }
+
+            // Check if npc is death
+            if (NPC.health <= .0f) {
+              NPC.alive = false;
+              NPC.start_animation(npc_t::DEATH);
+              NPC.default_sprite = NPC.death_sprite;
+            }
           }
         }
 
