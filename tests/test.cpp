@@ -8,6 +8,9 @@ int linked_list_tests()
   auto e1 = list.insert(1);
   auto e2 = list.insert(2);
 
+  (void)e1;
+  (void)e2;
+
   assert(e1 == e2->prev);
   assert(e1->next == e2);
 

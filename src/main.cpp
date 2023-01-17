@@ -10,7 +10,7 @@
 
 constexpr float TILE_SIZE = 2.0f;    // In meters
 constexpr float PLAYER_SIZE = 0.5f;  // In meters
-constexpr float PLAYER_HALF_SIZE = TO_F32(PLAYER_SIZE) / 2.0f;
+constexpr float PLAYER_HALF_SIZE = PLAYER_SIZE / 2.0f;
 
 constexpr float PLAYER_SPEED = 0.00000001f;  // In meters per second
 constexpr float PLAYER_SPEED_BOOSTED = PLAYER_SPEED * 2.0f;
@@ -31,23 +31,23 @@ constexpr int MAP_H = 24;
 // clang-format off
 char MAP[MAP_H][MAP_W] = {
     {2,2,2,2,5,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,2,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,4,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,5,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,2,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,4,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,5,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -230,6 +230,8 @@ public:
     if (current_animation.empty()) { return default_sprite; }
     return animations.at(current_animation).animation.sprite();
   }
+
+  inline bool in_animation() const { return !current_animation.empty(); }
 };
 
 
@@ -260,7 +262,7 @@ public:
 
 class npc_t : public base_actor_t
 {
-private:
+public:
   float attack_distance;
   float speed;
   float size;
@@ -268,9 +270,8 @@ private:
   float attack_damage;
   float accuracy;
   bool alive;
-  bool pain;
+  // bool pain;
 
-public:
   enum animation_type_t
   {
     ATTACK,
@@ -288,12 +289,11 @@ public:
       : base_actor_t({x, y}, scale, height_shift, sprite),
         attack_distance(rand_between(3, 6)),
         speed(0.03f),
-        size(0.5f),
+        size(.5f),
         health(100),
         attack_damage(10),
         accuracy(0.15f),
-        alive(true),
-        pain(false)
+        alive(true)
   {}
 
   inline void add_animation(
@@ -312,7 +312,11 @@ public:
     base_actor_t::start_animation(std::to_string(type));
   }
 
-  inline void update() {}
+
+  inline const std::string& animation_sound(const animation_type_t type)
+  {
+    return base_actor_t::animation_sound(std::to_string(type));
+  }
 };
 
 
@@ -350,6 +354,7 @@ struct weapon_t
 {
   animation_t animation;
   std::string sound_name;
+  float damage;
 };
 
 
@@ -365,11 +370,15 @@ private:
 
   player_t player;
   weapon_t weapon;
+  bool pulled_trigger;
+
   std::vector<unanimated_actor_t> unanimated_actors;
   std::vector<animated_actor_t> animated_actors;
   std::vector<npc_t> NPCs;
 
   std::vector<drawable_t> to_draw;
+  std::vector<drawable_t> to_draw_floor;
+  std::vector<drawable_t> to_draw_ceiling;
 
   bool should_draw_map;
   int map_w;
@@ -396,6 +405,7 @@ public:
         delta_angle(FOV / TO_F32(num_of_rays)),
         screen_dist(_screen_w / 2.0f / tan_f32(HALF_FOV)),
         ray_column_width(screen_w / num_of_rays),
+        pulled_trigger(false),
         should_draw_map(false)
   {}
 
@@ -468,18 +478,17 @@ private:
 
     // Weapon
 
-    // Fire trigger
+    // Reset the pulled trigger and set it in case
+    pulled_trigger = false;
     if ((is_key_pressed(keycap_t::SPACE) || mouse.left_button.click) &&
         !weapon.animation.is_animation_running()) {
-      // Start the sound
-      play_sound(sounds[weapon.sound_name]);
-
-      // Start the animation
-      weapon.animation.start_animation();
-
-      NPCs.back().start_animation(npc_t::DEATH);
+      pulled_trigger = true;
     }
+  }
 
+
+  void perform_all_animations()
+  {
     // Perform all the animations
 
     // Actors
@@ -500,9 +509,12 @@ private:
   void on_init(void*) override
   {
     // Hide the mouse
-    // show_mouse(false);
-    // mouse_set_FPS_mode(true);
+    mouse_set_FPS_mode(true);
+
+    // Reserve the memory for the vectors
     to_draw.reserve(screen_w * 2);
+    to_draw_floor.reserve(screen_w * 2);
+    to_draw_ceiling.reserve(screen_w * 2);
 
     // Load map
     load_map(MAP, MAP_W, MAP_H);
@@ -578,6 +590,7 @@ private:
                         animation_t::SINGLE};
 
     weapon.sound_name = "shotgun";
+    weapon.damage = 50.1f;
 
     // NPCs
     sprites["soldier_default"] = load_image("assets/sprites/npc/soldier/0.png");
@@ -634,7 +647,7 @@ private:
     sounds["soldier_death"] = load_sound("assets/sound/npc_death.wav");
     sounds["soldier_pain"] = load_sound("assets/sound/npc_pain.wav");
 
-    NPCs.emplace_back(4.0f, 4.0f, 1.5f, .3f, "soldier_default");
+    NPCs.emplace_back(6.0f, 6.0f, 1.5f, .3f, "soldier_default");
     // const animation_type_t type,
     // const std::vector<std::string>& frames,
     // const uint64_t timer_th,
@@ -668,16 +681,18 @@ private:
     NPCs.back().start_animation(npc_t::IDLE);
 
     // Init player
-    player.position = {25.0f, 25.0f};
+    // player.position = {25.0f, 25.0f};
+    player.position = {4.0f, 4.0f};
     player.angle = .0f;  // 90 degrees
 
     // Start things
-    music_do(music_t::PLAY, musics["main"]);
+    // music_do(music_t::PLAY, musics["main"]);
   }
 
 
   void update()
   {
+    // Update the player position
     const float sin = sin_f32(player.angle);
     const float cos = cos_f32(player.angle);
     const float speed =
@@ -746,9 +761,53 @@ private:
     // the angle must be between 0 and 2PI. TAU = 2 * pi
     player.angle = remainder_f32(player.angle, TAU);
 
+    // Fire player animation
+    if (pulled_trigger) {
+      // Start the sound
+      play_sound(sounds[weapon.sound_name]);
+
+      // Start the animation
+      weapon.animation.start_animation();
+    }
+
     // Update the NPCs
     for (auto& NPC : NPCs) {
-      NPC.update();
+      if (NPC.alive) {
+        // Check for hits
+        if (pulled_trigger) {
+          // Calculating if we it the npc using the line and circle formulas
+          // x, y are the npc coordinates
+          // px,py are the player coordinates
+          // A is the player angle
+          // (x - Px) * cos(A) + (y - Py) * sin(A) = d
+          // D is the distance from the center of the circle to the line
+          // We have to compare the d with the npc size
+
+          const float d = abs_f32(
+              (NPC.position.x - player.position.x) * cos_f32(player.angle) +
+              (NPC.position.y - player.position.y) * sin_f32(player.angle));
+
+
+          LOG_S << "D: " << d << " size: " << NPC.size << END_S;
+
+          if (d < NPC.size) {
+            // We hit the npc
+            play_sound(sounds[NPC.animation_sound(npc_t::PAIN)]);
+            NPC.start_animation(npc_t::PAIN);
+            // NPC.health -= weapon.damage;
+          }
+
+          // Check if npc is death
+          if (NPC.health <= .0f) {
+            NPC.alive = false;
+            NPC.start_animation(npc_t::DEATH);
+          }
+        }
+
+        if (NPC.alive && !NPC.in_animation()) {
+          NPC.start_animation(npc_t::IDLE);
+        }
+      }
     }
   }
 
@@ -794,6 +853,24 @@ private:
       const float x = pos.x / TILE_SIZE * PIXELS_IN_TILE;
       const float y = pos.y / TILE_SIZE * PIXELS_IN_TILE;
       draw_circle(floor_f32_to_i32(x), floor_f32_to_i32(y), 5, 0xFFFF00FF);
+    }
+
+    for (const auto& A : animated_actors) {
+      const point_f32_t& pos = A.position;
+      const float x = pos.x / TILE_SIZE * PIXELS_IN_TILE;
+      const float y = pos.y / TILE_SIZE * PIXELS_IN_TILE;
+      draw_circle(floor_f32_to_i32(x), floor_f32_to_i32(y), 5, 0xFFFF00FF);
+    }
+
+    for (const auto& A : NPCs) {
+      const point_f32_t& pos = A.position;
+      const float x = pos.x / TILE_SIZE * PIXELS_IN_TILE;
+      const float y = pos.y / TILE_SIZE * PIXELS_IN_TILE;
+
+      const int npc_size =
+          round_f32_to_i32(A.size / TILE_SIZE * PIXELS_IN_TILE / 2);
+      draw_circle(floor_f32_to_i32(x), floor_f32_to_i32(y), npc_size,
+                  0xFFFF00FF);
     }
   }
 
@@ -1089,6 +1166,8 @@ private:
       // draw_rect(draw_position, 0xFF0000FF);
 
       to_draw.emplace_back(depth, texture, draw_position, wall_chunk);
+
+      // Floor section
     }
   }
 
@@ -1096,7 +1175,6 @@ private:
   void prepare_to_draw_actor(const base_actor_t& actor)
   {
     // Calculate the angle that the player looks at the sprite
-    const point_f32_t& postion = actor.position;
     const float dx = actor.position.x - player.position.x;
     const float dy = actor.position.y - player.position.y;
 
@@ -1260,6 +1338,7 @@ private:
   {
     check_events();
     update();
+    perform_all_animations();
     draw();
   }
 
