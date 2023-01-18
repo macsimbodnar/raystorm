@@ -7,6 +7,7 @@
 #include "log.hpp"
 #include "math.hpp"
 
+static bool reset_game = false;
 
 constexpr float TILE_SIZE = 2.0f;    // In meters
 constexpr float PLAYER_SIZE = 0.5f;  // In meters
@@ -34,13 +35,13 @@ char MAP[MAP_H][MAP_W] = {
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,2,2,2,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,2,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,0,0,0,2,0,2,0,2,0,2,0,0,0,0,1},
+    {1,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,3,0,0,0,2,0,0,0,0,0,2,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,0,0,0,2,0,2,0,2,0,2,0,0,0,0,1},
     {1,0,0,0,0,0,4,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,2,2,2,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,5,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -270,6 +271,7 @@ public:
   float attack_damage;
   float accuracy;
   bool alive;
+  bool see_the_player;
   std::string death_sprite;
 
   enum animation_type_t
@@ -295,6 +297,7 @@ public:
         attack_damage(10),
         accuracy(0.15f),
         alive(true),
+        see_the_player(false),
         death_sprite(_death_sprite)
   {}
 
@@ -412,11 +415,167 @@ public:
 
 
 private:
+  inline bool is_player_visible(const point_f32_t& point) const
+  {
+    // we ray cast from player to the point x,y and see if there is a wall in
+    // between
+
+    const float x_limit = map_w * TILE_SIZE;
+    const float y_limit = map_h * TILE_SIZE;
+
+    const point_f32_t& A = player.position;
+    const point_t A_tile = pos_to_tile(A);
+    const point_f32_t& B = point;
+    const point_t B_tile = pos_to_tile(B);
+    const float ray_angle = atan2_f32(B.y - A.y, B.x - A.x);
+    const float tan_a = tan_f32(ray_angle);
+
+    // Check for vertical
+    float vertical_x;
+    float vertical_dx;
+    float vertical_dy;
+    const bool facing_right = cos_f32(ray_angle) > 0 ? true : false;
+    if (facing_right) {
+      // Right
+      vertical_x = (A_tile.x + 1) * TILE_SIZE;
+      vertical_dx = TILE_SIZE;
+      vertical_dy = TILE_SIZE * tan_a;
+    } else {
+      // Left
+      vertical_x = A_tile.x * TILE_SIZE;
+      vertical_dx = -TILE_SIZE;
+      vertical_dy = -TILE_SIZE * tan_a;
+    }
+
+    const float vertical_y = A.y - (A.x - vertical_x) * tan_a;
+
+    float vertical_intersection_X = vertical_x;
+    float vertical_intersection_Y = vertical_y;
+
+    float vertical_hit = false;
+    while (
+        vertical_intersection_X >= .0f && vertical_intersection_X < x_limit &&
+        vertical_intersection_Y >= .0f && vertical_intersection_Y < y_limit) {
+      vertical_hit = false;
+      const int x = floor_f32_to_i32(vertical_intersection_X) / TILE_SIZE;
+      const int y = floor_f32_to_i32(vertical_intersection_Y) / TILE_SIZE;
+
+
+      assert(x >= 0);
+      assert(y >= 0);
+      assert(y < map_h);
+
+      if (facing_right) {
+        // Right
+        assert(x < map_w);
+
+        if (x >= B_tile.x) {
+          // Stop checking if pass the point B
+          break;
+        }
+
+        const char tile_id = game_map[y][x];
+        if (tile_id != 0) { vertical_hit = true; }
+      } else {
+        // Left
+        assert(x - 1 < map_w);
+
+        if (x <= B_tile.x) {
+          // Stop checking if pass the point B
+          break;
+        }
+
+        const char tile_id = game_map[y][x - 1];
+        if (tile_id != 0) { vertical_hit = true; }
+      }
+
+      // If we hit something then just return false
+      if (vertical_hit) {
+        // HIT THE WALL
+        return false;
+      }
+
+      vertical_intersection_X += vertical_dx;
+      vertical_intersection_Y += vertical_dy;
+    }
+
+    // Horizontal
+    float horizontal_y;
+    float horizontal_dx;
+    float horizontal_dy;
+    const bool facing_up = ray_angle > 0 ? false : true;
+
+    if (facing_up) {
+      horizontal_y = A_tile.y * TILE_SIZE;
+      horizontal_dy = -TILE_SIZE;
+      horizontal_dx = -TILE_SIZE / tan_a;
+    } else {
+      horizontal_y = (A_tile.y + 1) * TILE_SIZE;
+      horizontal_dy = TILE_SIZE;
+      horizontal_dx = TILE_SIZE / tan_a;
+    }
+
+    const float horizontal_x = A.x - (A.y - horizontal_y) / tan_a;
+
+    float horizontal_intersection_X = horizontal_x;
+    float horizontal_intersection_Y = horizontal_y;
+
+    float horizontal_hit = false;
+    while (horizontal_intersection_X >= .0f &&
+           horizontal_intersection_X < x_limit &&
+           horizontal_intersection_Y >= .0f &&
+           horizontal_intersection_Y < y_limit) {
+      horizontal_hit = false;
+      const int x = floor_f32_to_i32(horizontal_intersection_X) / TILE_SIZE;
+      const int y = floor_f32_to_i32(horizontal_intersection_Y) / TILE_SIZE;
+
+      assert(x >= 0);
+      assert(y >= 0);
+      assert(x < map_w);
+
+      if (facing_up) {
+        // Right
+        assert(y - 1 < map_h);
+
+        if (y <= B_tile.y) {
+          // Stop checking if pass the point B
+          break;
+        }
+
+        const char tile_id = game_map[y - 1][x];
+        if (tile_id != 0) { horizontal_hit = true; }
+      } else {
+        // Left
+        assert(y < map_h);
+
+        if (y >= B_tile.y) {
+          // Stop checking if pass the point B
+          break;
+        }
+
+        const char tile_id = game_map[y][x];
+        if (tile_id != 0) { horizontal_hit = true; }
+      }
+
+      // If we hit something then just return false
+      if (horizontal_hit) {
+        // HIT THE WALL
+        return false;
+      }
+
+      horizontal_intersection_X += horizontal_dx;
+      horizontal_intersection_Y += horizontal_dy;
+    }
+
+    return true;
+  }
+
   inline void load_map(void* m, const size_t w, const size_t h)
   {
     map_w = w;
     map_h = h;
 
+    // TODO(max): Change this shit
     char(*map)[w] = static_cast<char(*)[w]>(m);
 
     game_map.resize(h);
@@ -457,6 +616,12 @@ private:
 
     if (is_key_pressed(keycap_t::ESC)) {
       // Quit the game
+      stop();
+    }
+
+    if (is_key_pressed(keycap_t::R)) {
+      // Reset the game
+      reset_game = true;
       stop();
     }
 
@@ -512,10 +677,20 @@ private:
     // Hide the mouse
     mouse_set_FPS_mode(true);
 
+    to_draw.clear();
+    to_draw_floor.clear();
+    to_draw_ceiling.clear();
+    unanimated_actors.clear();
+    animated_actors.clear();
+    NPCs.clear();
+
     // Reserve the memory for the vectors
     to_draw.reserve(screen_w * 2);
     to_draw_floor.reserve(screen_w * 2);
     to_draw_ceiling.reserve(screen_w * 2);
+    unanimated_actors.reserve(10);
+    animated_actors.reserve(10);
+    NPCs.reserve(10);
 
     // Load map
     load_map(MAP, MAP_W, MAP_H);
@@ -554,13 +729,10 @@ private:
     sprites["buzzy"] = load_image("assets/sprites/buzzy.webp");
 
     // Add unanimated actors
-    unanimated_actors.reserve(10);
     unanimated_actors.emplace_back(27.0f, 19.0f, 1.5f, 0.3f, "candelabrum");
     unanimated_actors.emplace_back(16.5f * 2, 12.5f * 2, 4.0f, -1.0f, "buzzy");
 
     // Add animated actors
-    animated_actors.reserve(10);
-
     animated_actors.emplace_back(31.0f, 25.0f, 1.8f, 0.2f);
     animated_actors.back().add_animation(
         "default_animation",
@@ -648,8 +820,9 @@ private:
     sounds["soldier_death"] = load_sound("assets/sound/npc_death.wav");
     sounds["soldier_pain"] = load_sound("assets/sound/npc_pain.wav");
 
-    NPCs.emplace_back(6.0f, 6.0f, 1.5f, .3f, "soldier_default",
-                      "soldier_death_8");
+    NPCs.emplace_back(23.0f * TILE_SIZE + TILE_SIZE / 2,
+                      7.0f * TILE_SIZE + TILE_SIZE / 2, 1.5f, .3f,
+                      "soldier_default", "soldier_death_8");
 
     NPCs.back().add_animation(npc_t::ATTACK,
                               {"soldier_attack_0", "soldier_attack_1"},
@@ -679,6 +852,16 @@ private:
 
     NPCs.back().start_animation(npc_t::IDLE);
 
+    // Add another soldier
+    NPCs.push_back(NPCs.back());
+    NPCs.back().position = {6.0f, 6.0f};
+
+    NPCs.push_back(NPCs.back());
+    NPCs.back().position = {6.0f, 12.0f};
+
+    NPCs.push_back(NPCs.back());
+    NPCs.back().position = {21.0f, 19.0f};
+
     // Init player
     // player.position = {25.0f, 25.0f};
     // player.position = {4.0f, 4.0f};
@@ -686,7 +869,7 @@ private:
     player.angle = -P2;
 
     // Start things
-    // music_do(music_t::PLAY, musics["main"]);
+    music_do(music_t::PLAY, musics["main"]);
   }
 
 
@@ -775,8 +958,11 @@ private:
     const float player_angle_sin = sin_f32(player.angle);
     for (auto& NPC : NPCs) {
       if (NPC.alive) {
+        // Check if see the player
+        NPC.see_the_player = is_player_visible(NPC.position);
+
         // Check for hits
-        if (pulled_trigger) {
+        if (pulled_trigger && NPC.see_the_player) {
           // Calculating if we it the npc using the line and circle formulas
           // distance = abs((Bx - Px) * sin(A) - (By - Py) * cos(A))
 
@@ -838,6 +1024,10 @@ private:
   void draw_2d_map()
   {
     constexpr int PIXELS_IN_TILE = 32;
+    const int player_x =
+        floor_f32_to_i32(player.position.x / TILE_SIZE * PIXELS_IN_TILE);
+    const int player_y =
+        floor_f32_to_i32(player.position.y / TILE_SIZE * PIXELS_IN_TILE);
 
     // LOG_I << "H: " << map_h << " W:" << map_w << END_I;
 
@@ -868,13 +1058,20 @@ private:
 
     for (const auto& A : NPCs) {
       const point_f32_t& pos = A.position;
-      const float x = pos.x / TILE_SIZE * PIXELS_IN_TILE;
-      const float y = pos.y / TILE_SIZE * PIXELS_IN_TILE;
+      const int x = floor_f32_to_i32(pos.x / TILE_SIZE * PIXELS_IN_TILE);
+      const int y = floor_f32_to_i32(pos.y / TILE_SIZE * PIXELS_IN_TILE);
+
+      // Draw line if the NPC see the player
+      if (A.see_the_player) {
+        draw_line({player_x, player_y}, {x, y}, 0xFF5E05FF);
+      }
 
       const int npc_size =
           round_f32_to_i32(A.size / TILE_SIZE * PIXELS_IN_TILE / 2);
-      draw_circle(floor_f32_to_i32(x), floor_f32_to_i32(y), npc_size,
-                  0xFFFF00FF);
+
+      pixel_t color = A.alive ? 0xFFFF00FF : 0xFF0000FF;
+
+      draw_circle(x, y, npc_size, color);
     }
   }
 
@@ -1353,10 +1550,12 @@ private:
 int main(int, char**)
 {
   srand(time(0));
-
   gui_t gui(1024, 1024);
 
-  if (!gui.run()) { return EXIT_FAILURE; }
+  do {
+    reset_game = false;
+    (void)gui.run();
+  } while (reset_game);
 
   return EXIT_SUCCESS;
 }
