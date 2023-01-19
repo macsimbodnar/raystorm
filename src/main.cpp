@@ -653,7 +653,7 @@ private:
   }
 
 
-  void perform_all_animations()
+  void animate()
   {
     // Perform all the animations
 
@@ -759,7 +759,7 @@ private:
 
     weapon.animation = {{"shotgun_0", "shotgun_1", "shotgun_2", "shotgun_3",
                          "shotgun_4", "shotgun_5"},
-                        1000 / 10,
+                        1000 / 12,
                         animation_t::SINGLE};
 
     weapon.sound_name = "shotgun";
@@ -833,7 +833,7 @@ private:
         {"soldier_death_0", "soldier_death_1", "soldier_death_2",
          "soldier_death_3", "soldier_death_4", "soldier_death_5",
          "soldier_death_6", "soldier_death_7", "soldier_death_8"},
-        ANIMATION_DT, "soldier_death");
+        ANIMATION_DT / 4, "soldier_death");
 
     NPCs.back().add_animation(
         npc_t::IDLE,
@@ -873,7 +873,7 @@ private:
   }
 
 
-  void update()
+  inline void update_player()
   {
     // Update the player position
     const float sin = sin_f32(player.angle);
@@ -943,7 +943,11 @@ private:
 
     // the angle must be between 0 and 2PI. TAU = 2 * pi
     player.angle = remainder_f32(player.angle, TAU);
+  }
 
+
+  inline void update_weapon()
+  {
     // Fire player animation
     if (pulled_trigger) {
       // Start the sound
@@ -952,7 +956,10 @@ private:
       // Start the animation
       weapon.animation.start_animation();
     }
+  }
 
+  inline void update_NPCs()
+  {
     // Update the NPCs
     const float player_angle_cos = cos_f32(player.angle);
     const float player_angle_sin = sin_f32(player.angle);
@@ -1516,13 +1523,28 @@ private:
   }
 
 
-  void draw()
+  void on_update(void*) override
   {
     to_draw.clear();
 
+    /*------ Check events               ------*/
+    check_events();
+
+    /*------ Update the game            ------*/
+    update_player();
+    update_weapon();
+    update_NPCs();
+
+    /*------ Execute all the animation  ------*/
+    animate();
+
+    /*------ Draw                       ------*/
+
+    // Ray cast
     ray_cast();
     prepare_to_draw_all_actors();
 
+    // Draw
     draw_background();
     draw_drawables();
     draw_weapon();
@@ -1531,16 +1553,9 @@ private:
       draw_2d_map();
       draw_2d_player();
     }
+
+    // Print text
     draw_fps();
-  }
-
-
-  void on_update(void*) override
-  {
-    check_events();
-    update();
-    perform_all_animations();
-    draw();
   }
 
   inline void log(const std::string& msg) override { LOG_E << msg << END_E; }
