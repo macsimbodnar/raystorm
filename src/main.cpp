@@ -26,11 +26,8 @@ constexpr float DARKNESS_MASK_SLOPE = 1.0f * 255.0f / 80.0f;
 
 constexpr int ANIMATION_DT = 1000 / 6;  // In ms
 
-
-constexpr int MAP_W = 32;
-constexpr int MAP_H = 24;
 // clang-format off
-char MAP[MAP_H][MAP_W] = {
+const std::vector<std::vector<char>> MAP = {
     {2,2,2,2,5,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -591,22 +588,24 @@ private:
     return true;
   }
 
-  inline void load_map(void* m, const size_t w, const size_t h)
+
+  inline void load_map(const std::vector<std::vector<char>>& map)
   {
-    map_w = w;
-    map_h = h;
+    assert(map.size() > 0);
 
-    // TODO(max): Change this shit
-    char(*map)[w] = static_cast<char(*)[w]>(m);
+    map_h = map.size();
+    map_w = map[0].size();
 
-    game_map.resize(h);
-    for (size_t i = 0; i < h; i++) {
-      game_map[i].resize(w);
-      for (size_t j = 0; j < w; j++) {
-        game_map[i][j] = static_cast<char>(map[i][j]);
-      }
+    game_map = map;
+
+    assert(game_map.size() == map_h);
+
+    for (auto const& I : game_map) {
+      assert(I.size() == map_w);
+      (void)I;
     }
   }
+
 
   inline point_t pos_to_tile(const float x, const float y) const
   {
@@ -616,31 +615,81 @@ private:
     return tile;
   }
 
+
   inline point_t pos_to_tile(const point_f32_t& p) const
   {
     return pos_to_tile(p.x, p.y);
   }
 
-  inline bool is_postion_legal(const point_f32_t& p) const
+
+  inline point_f32_t calculate_legal_pos(const point_f32_t& from,
+                                         const point_f32_t& to,
+                                         const float body_size) const
   {
-    assert(p.x >= 0);
-    assert(p.x < map_w * TILE_SIZE);
-    assert(p.y >= 0);
-    assert(p.y < map_h * TILE_SIZE);
-    const point_t tile = pos_to_tile(p);
+    // constexpr float SMALL_OFFSET = 0.00001;
+    point_f32_t destination_pos = to;
+    point_f32_t test_pos;
 
-    return (game_map[tile.y][tile.x] != 0) ? false : true;
-  }
+    const float half_body = body_size / 2;
+    const float dx = to.x - from.x;
+    const float dy = to.y - from.y;
 
-  inline bool is_postion_legal(const float x, const float y) const
-  {
-    assert(x >= 0);
-    assert(x < map_w * TILE_SIZE);
-    assert(y >= 0);
-    assert(y < map_h * TILE_SIZE);
-    const point_t tile = pos_to_tile(x, y);
+    if (dx > 0) {
+      // Moving right
+      test_pos.x = to.x + half_body;
+    } else {
+      // Moving left
+      test_pos.x = to.x - half_body;
+    }
 
-    return (game_map[tile.y][tile.x] != 0) ? false : true;
+    if (dy > 0) {
+      // Moving down
+      test_pos.y = to.y + half_body;
+    } else {
+      // Moving up
+      test_pos.y = to.y - half_body;
+    }
+
+    const point_t dest_tile = pos_to_tile(test_pos);
+
+    assert(dest_tile.x >= 0);
+    assert(dest_tile.x < map_w);
+    assert(dest_tile.y >= 0);
+    assert(dest_tile.y < map_h);
+
+    const char tile_value = game_map[dest_tile.y][dest_tile.x];
+    const bool is_empty = (tile_value == 0);
+
+    if (!is_empty) {
+      /**
+       * If the target position is not empty then we calculate the closest valid
+       *
+       * Assume that can not move more then one tile in one frame
+       */
+
+      // TODO
+      destination_pos = from;
+
+      // if (dx > 0) {
+      //   // Moving right
+      //   destination_pos.x = (dest_tile.x * TILE_SIZE) - SMALL_OFFSET;
+      // } else {
+      //   // Moving left
+      //   destination_pos.x =
+      //       (dest_tile.x * TILE_SIZE) + TILE_SIZE + SMALL_OFFSET;
+      // }
+
+      // if (dy > 0) {
+      //   // Moving down
+      //   destination_pos.y = (dest_tile.y * TILE_SIZE) - SMALL_OFFSET;
+      // } else {
+      //   // Moving up
+      //   destination_pos.y =
+      //       (dest_tile.y * TILE_SIZE) + TILE_SIZE + SMALL_OFFSET;
+      // }
+    }
+
+    return destination_pos;
   }
 
 
@@ -727,7 +776,7 @@ private:
     NPCs.reserve(10);
 
     // Load map
-    load_map(MAP, MAP_W, MAP_H);
+    load_map(MAP);
 
     // Load musics
     musics["main"] = load_music("assets/sound/theme.mp3");
@@ -874,7 +923,7 @@ private:
         {"soldier_idle_0", "soldier_idle_1", "soldier_idle_2", "soldier_idle_3",
          "soldier_idle_4", "soldier_idle_5", "soldier_idle_6",
          "soldier_idle_7"},
-        ANIMATION_DT, "", animation_t::LOOP);
+        ANIMATION_DT * 3, "", animation_t::LOOP);
 
     NPCs.back().add_animation(npc_t::PAIN, {"soldier_pain_0"}, ANIMATION_DT,
                               "soldier_pain");
@@ -938,30 +987,12 @@ private:
     }
 
     // TODO(max): Normalize direction to avoid the diagonal to be faster
-    const float dest_x = player.position.x + dx;
-    const float dest_y = player.position.y + dy;
+    const point_f32_t dest_pos = {player.position.x + dx,
+                                  player.position.y + dy};
 
-    // Add player body size
-    // TODO(max): Fix the collision with something that works properly
-    float x_to_test;
-    float y_to_test;
-
-    if (dx > 0) {
-      x_to_test = dest_x + PLAYER_HALF_SIZE;
-    } else {
-      x_to_test = dest_x - PLAYER_HALF_SIZE;
-    }
-
-    if (dy > 0) {
-      y_to_test = dest_y + PLAYER_HALF_SIZE;
-    } else {
-      y_to_test = dest_y - PLAYER_HALF_SIZE;
-    }
-
-    if (is_postion_legal(x_to_test, y_to_test)) {
-      player.position.x = dest_x;
-      player.position.y = dest_y;
-    }
+    // Move the player to a valid position
+    player.position =
+        calculate_legal_pos(player.position, dest_pos, PLAYER_SIZE);
 
     // Handle player angle with keys
     if (is_key_pressed(keycap_t::LEFT)) {
@@ -1020,19 +1051,20 @@ private:
             const float npc_speed = NPC.speed * delta_time();
             const float dx = cos_f32(NPC_angle) * npc_speed;
             const float dy = sin_f32(NPC_angle) * npc_speed;
-            const point_f32_t target_position = {NPC.position.x - dx,
-                                                 NPC.position.y - dy};
+            const point_f32_t test_target_position = {NPC.position.x - dx,
+                                                      NPC.position.y - dy};
 
-            // Check the position
-            if (is_postion_legal(target_position)) {
-              if (NPC.position != target_position) {
-                NPC.position = target_position;
+            // Calculate the closest valid position;
+            const point_f32_t target_position = calculate_legal_pos(
+                NPC.position, test_target_position, NPC.size);
 
-                if (!NPC.in_animation() ||
-                    NPC.last_running_animation == npc_t::IDLE) {
-                  // Start walk animation if we not already in walk animation
-                  NPC.start_animation(npc_t::WALK);
-                }
+            if (NPC.position != target_position) {
+              NPC.position = target_position;
+
+              if (!NPC.in_animation() ||
+                  NPC.last_running_animation == npc_t::IDLE) {
+                // Start walk animation if we not already in walk animation
+                NPC.start_animation(npc_t::WALK);
               }
             }
           }
