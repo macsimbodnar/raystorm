@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include <stddef.h>
 
 template <class T>

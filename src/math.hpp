@@ -7,6 +7,7 @@
 #define ONC_DEGREE_IN_RADIANS (0.0174533f)
 #define TAU (2.0f * PI)
 #define TO_F32(_X_) static_cast<float>(_X_)
+#define TO_INT(_X_) static_cast<int>(_X_)
 
 int32_t round_f32_to_i32(float r32);
 uint32_t round_f32_to_u32(float r32);

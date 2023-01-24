@@ -6,6 +6,7 @@
 #include <vector>
 #include "log.hpp"
 #include "math.hpp"
+#include "pathfinder.hpp"
 
 static bool reset_game = false;
 
@@ -598,10 +599,10 @@ private:
 
     game_map = map;
 
-    assert(game_map.size() == map_h);
+    assert(TO_INT(game_map.size()) == map_h);
 
     for (auto const& I : game_map) {
-      assert(I.size() == map_w);
+      assert(TO_INT(I.size()) == map_w);
       (void)I;
     }
   }
@@ -1067,6 +1068,12 @@ private:
                 NPC.start_animation(npc_t::WALK);
               }
             }
+          } else {
+            // If we wall out of the range we stop the NPC walk animation
+            if (NPC.in_animation() &&
+                NPC.last_running_animation == npc_t::WALK) {
+              NPC.stop_animation();
+            }
           }
 
           /*------ Check if NPC is hit by the player ------*/
@@ -1106,6 +1113,12 @@ private:
 
         if (NPC.alive && !NPC.in_animation()) {
           NPC.start_animation(npc_t::IDLE);
+        }
+
+
+        if (is_key_pressed(keycap_t::P)) {
+          (void)find_path(pos_to_tile(NPC.position),
+                          pos_to_tile(player.position), game_map, map_w, map_h);
         }
       }
     }
