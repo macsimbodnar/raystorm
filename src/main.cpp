@@ -12,7 +12,7 @@ static bool reset_game = false;
 
 constexpr float TILE_SIZE = 2.0f;    // In meters
 constexpr float PLAYER_SIZE = 0.5f;  // In meters
-constexpr float PLAYER_HALF_SIZE = PLAYER_SIZE / 2.0f;
+// constexpr float PLAYER_HALF_SIZE = PLAYER_SIZE / 2.0f;
 
 constexpr float PLAYER_SPEED = 0.00000001f;  // In meters per second
 constexpr float PLAYER_SPEED_BOOSTED = PLAYER_SPEED * 2.0f;
@@ -291,9 +291,10 @@ public:
   float health;
   float attack_damage;
   float accuracy;
-  float vision_length;
+  float perception_distance;
   bool alive;
   bool see_the_player;
+  bool in_tracking_mode;
   std::string death_sprite;
   animation_type_t last_running_animation;
 
@@ -311,7 +312,7 @@ public:
         health(100),
         attack_damage(10),
         accuracy(0.15f),
-        vision_length(TILE_SIZE * 5),
+        perception_distance(TILE_SIZE * 6),
         alive(true),
         see_the_player(false),
         death_sprite(_death_sprite),
@@ -553,7 +554,7 @@ private:
       assert(x < map_w);
 
       if (facing_up) {
-        // Right
+        // Up
         assert(y - 1 < map_h);
 
         if (y <= B_tile.y) {
@@ -561,10 +562,10 @@ private:
           break;
         }
 
-        const char tile_id = game_map[y - 1][x];
+        const char tile_id = game_map[y][x];
         if (tile_id != 0) { horizontal_hit = true; }
       } else {
-        // Left
+        // Down
         assert(y < map_h);
 
         if (y >= B_tile.y) {
@@ -953,7 +954,7 @@ private:
     player.angle = -P2;
 
     // Start things
-    music_do(music_t::PLAY, musics["main"]);
+    // music_do(music_t::PLAY, musics["main"]);
   }
 
 
@@ -1029,53 +1030,86 @@ private:
     // Update the NPCs
     const float player_angle_cos = cos_f32(player.angle);
     const float player_angle_sin = sin_f32(player.angle);
-    const point_f32_t& next_npc_position = player.position;
+    const point_f32_t& player_position = player.position;
+    const point_t player_tile_position = pos_to_tile(player_position);
 
     for (auto& NPC : NPCs) {
       if (NPC.alive) {
         // Get the NPC angle that looks at the player
-        const float NPC_angle = atan2_f32(NPC.position.y - next_npc_position.y,
-                                          NPC.position.x - next_npc_position.x);
+        const float NPC_to_player_angle =
+            atan2_f32(NPC.position.y - player_position.y,
+                      NPC.position.x - player_position.x);
 
         // Check if see the player
         const float distance =
-            dist_f32(next_npc_position.x, next_npc_position.y, NPC.position.x,
-                     NPC.position.y, NPC_angle);
-        const bool is_player_in_range = (distance < NPC.vision_length);
+            dist_f32(player_position.x, player_position.y, NPC.position.x,
+                     NPC.position.y, NPC_to_player_angle);
+        const bool NPC_perceiving_player = (distance < NPC.perception_distance);
 
-        NPC.see_the_player = is_player_visible(NPC.position, NPC_angle);
+        // const bool was_player_visible_before = NPC.see_the_player;
+        NPC.see_the_player =
+            is_player_visible(NPC.position, NPC_to_player_angle);
 
-        if (NPC.see_the_player) {
-          /*------ Move the NPC                      ------*/
+        // Set or reset the the tracking mode
+        if (NPC_perceiving_player) {
+          if (NPC.see_the_player) { NPC.in_tracking_mode = true; }
+        } else {
+          NPC.in_tracking_mode = false;
+        }
 
-          if (is_player_in_range) {
-            const float npc_speed = NPC.speed * delta_time();
-            const float dx = cos_f32(NPC_angle) * npc_speed;
-            const float dy = sin_f32(NPC_angle) * npc_speed;
-            const point_f32_t test_target_position = {NPC.position.x - dx,
-                                                      NPC.position.y - dy};
+        /*------ Move the NPC                      ------*/
+        if (NPC.in_tracking_mode) {
+          // If the player is visible then the NPC walk directly to the player
+          // else he will search for the path
 
-            // Calculate the closest valid position;
-            const point_f32_t target_position = calculate_legal_pos(
-                NPC.position, test_target_position, NPC.size);
-
-            if (NPC.position != target_position) {
-              NPC.position = target_position;
-
-              if (!NPC.in_animation() ||
-                  NPC.last_running_animation == npc_t::IDLE) {
-                // Start walk animation if we not already in walk animation
-                NPC.start_animation(npc_t::WALK);
-              }
-            }
+          float angle_to_use;
+          if (NPC.see_the_player) {
+            angle_to_use = NPC_to_player_angle;
           } else {
-            // If we wall out of the range we stop the NPC walk animation
-            if (NPC.in_animation() &&
-                NPC.last_running_animation == npc_t::WALK) {
-              NPC.stop_animation();
-            }
+            // Get the next position
+            const point_t npc_pos = pos_to_tile(NPC.position);
+            const point_t next_tile = pathfinder::find_path(
+                npc_pos, player_tile_position, game_map, map_w, map_h);
+
+            const float half_tile_size = TILE_SIZE / 2.0f;
+            const point_f32_t next_pos = {
+                (next_tile.x * TILE_SIZE) + half_tile_size,
+                (next_tile.y * TILE_SIZE) + half_tile_size,
+            };
+
+            const float NPC_to_next_pos_angle = atan2_f32(
+                NPC.position.y - next_pos.y, NPC.position.x - next_pos.x);
+
+            angle_to_use = NPC_to_next_pos_angle;
           }
 
+          const float npc_speed = NPC.speed * delta_time();
+          const float dx = cos_f32(angle_to_use) * npc_speed;
+          const float dy = sin_f32(angle_to_use) * npc_speed;
+          const point_f32_t test_target_position = {NPC.position.x - dx,
+                                                    NPC.position.y - dy};
+
+          // Calculate the closest valid position;
+          const point_f32_t target_position =
+              calculate_legal_pos(NPC.position, test_target_position, NPC.size);
+
+          if (NPC.position != target_position) {
+            NPC.position = target_position;
+
+            if (!NPC.in_animation() ||
+                NPC.last_running_animation == npc_t::IDLE) {
+              // Start walk animation if we not already in walk animation
+              NPC.start_animation(npc_t::WALK);
+            }
+          }
+        } else {
+          // If we wall out of the range we stop the NPC walk animation
+          if (NPC.in_animation() && NPC.last_running_animation == npc_t::WALK) {
+            NPC.stop_animation();
+          }
+        }
+
+        if (NPC.see_the_player) {
           /*------ Check if NPC is hit by the player ------*/
           if (pulled_trigger) {
             // Calculating if we it the npc using the line and circle formulas
@@ -1113,12 +1147,6 @@ private:
 
         if (NPC.alive && !NPC.in_animation()) {
           NPC.start_animation(npc_t::IDLE);
-        }
-
-
-        if (is_key_pressed(keycap_t::P)) {
-          (void)find_path(pos_to_tile(NPC.position),
-                          pos_to_tile(player.position), game_map, map_w, map_h);
         }
       }
     }
@@ -1211,9 +1239,9 @@ private:
         round_f32_to_i32(player.position.y / TILE_SIZE * PIXELS_IN_TILE)};
 
     // Tile
-    draw_rect({(tile.x * PIXELS_IN_TILE) + 1, (tile.y * PIXELS_IN_TILE),
-               PIXELS_IN_TILE - 2, PIXELS_IN_TILE - 2},
-              gray);
+    // draw_rect({(tile.x * PIXELS_IN_TILE) + 1, (tile.y * PIXELS_IN_TILE),
+    //            PIXELS_IN_TILE - 2, PIXELS_IN_TILE - 2},
+    //           gray);
 
     // Direction
     const point_t a = {player_screen_pos.x, player_screen_pos.y};

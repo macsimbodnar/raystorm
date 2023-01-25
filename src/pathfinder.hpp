@@ -1,34 +1,57 @@
 #pragma once
+
+#include <array>
 #include <cassert>
 #include <pixello.hpp>
 #include <queue>
 #include <unordered_map>
 #include "log.hpp"
 #include "math.hpp"
+#include "memory"
 
+
+namespace pathfinder
+{
 
 struct node_t
 {
   int x;
   int y;
-  node_t* parent;
+  std::shared_ptr<node_t> parent;
 
-  node_t() : x(0), y(0), parent(nullptr) {}
-  node_t(const int _x, const int _y, node_t* _p) : x(_x), y(_y), parent(_p) {}
+  node_t() : x(0), y(0) {}
+  node_t(const int _x, const int _y) : x(_x), y(_y) {}
+  node_t(const int _x, const int _y, const std::shared_ptr<node_t>& _p)
+      : x(_x), y(_y), parent(_p)
+  {}
 };
 
 
-inline std::vector<node_t> get_neighbors(
-    node_t* node,
+bool operator==(const node_t& lhs, const node_t& rhs)
+{
+  bool result = (lhs.x == rhs.x && lhs.y == rhs.y);
+  return result;
+}
+
+
+bool operator!=(const node_t& lhs, const node_t& rhs)
+{
+  bool result = (lhs.x != rhs.x || lhs.y != rhs.y);
+  return result;
+}
+
+
+inline std::vector<std::shared_ptr<node_t>> get_neighbors(
+    const std::shared_ptr<node_t>& node,
     const std::vector<std::vector<char>>& map,
     const int w,
     const int h)
 {
   assert((int)map.size() == h);
   assert(map.size() > 0);
-  assert((int)map[0].size() == h);
+  assert((int)map[0].size() == w);
 
-  std::vector<node_t> neighbors;
+  std::vector<std::shared_ptr<node_t>> neighbors;
   neighbors.reserve(9);
 
   /**
@@ -39,18 +62,16 @@ inline std::vector<node_t> get_neighbors(
    * [-1, 1][ 0, 1][ 1, 1]
    *
    */
+  static const std::array<point_t, 4> directions = {
+      point_t(0, -1), point_t(-1, 0), point_t(1, 0), point_t(0, 1)};
 
-  for (int i = -1; i < 1; ++i) {
-    for (int j = -1; j < 1; ++j) {
-      if (i == 0 && j == 0) { continue; }
+  for (const auto& I : directions) {
+    const int x = node.get()->x + I.x;
+    const int y = node.get()->y + I.y;
 
-      const int x = node->x + i;
-      const int y = node->y + j;
-
-      if (x >= 0 && x < w && y >= 0 && y < h && map[x][y] == 0) {
-        const node_t neighbor = {x, y, node};
-        neighbors.push_back(std::move(neighbor));
-      }
+    if (x >= 0 && x < w && y >= 0 && y < h && map[y][x] == 0) {
+      std::shared_ptr<node_t> neighbor = std::make_shared<node_t>(x, y, node);
+      neighbors.push_back(neighbor);
     }
   }
 
@@ -58,26 +79,34 @@ inline std::vector<node_t> get_neighbors(
 }
 
 
-inline std::vector<node_t> BFS(node_t& start,
-                               node_t& end,
+inline const char* get_cell_pointer(const std::vector<std::vector<char>>& map,
+                                    const node_t& node)
+{
+  const char* ptr = &(map[node.y][node.x]);
+  return ptr;
+}
+
+
+inline std::vector<node_t> BFS(const node_t& start,
+                               const node_t& end,
                                const std::vector<std::vector<char>>& map,
                                const int w,
                                const int h)
 {
-  std::queue<node_t> q;
-  std::unordered_map<int, bool> visited;
+  std::queue<std::shared_ptr<node_t>> q;
+  std::unordered_map<const char*, bool> visited;
 
-  q.push(start);
-  visited[(start.y * w) + start.x] = true;
+  q.push(std::make_shared<node_t>(start));
+  visited[get_cell_pointer(map, start)] = true;
 
   while (!q.empty()) {
-    node_t current = q.front();
+    const auto current = q.front();
     q.pop();
 
-    if (current.x == end.x && current.y == end.y) {
+    if (*(current.get()) == end) {
       std::vector<node_t> path;
 
-      node_t* current_node = &current;
+      auto current_node = current;
 
       while (current_node != nullptr) {
         path.push_back(*current_node);
@@ -87,11 +116,11 @@ inline std::vector<node_t> BFS(node_t& start,
       return path;
     }
 
-    for (auto& neighbor : get_neighbors(&current, map, w, h)) {
-      const int id = (neighbor.y * w) + neighbor.x;
-      if (!visited[id]) {
+    for (auto neighbor : get_neighbors(current, map, w, h)) {
+      const char* ptr = get_cell_pointer(map, *(neighbor.get()));
+      if (!visited[ptr]) {
         q.push(neighbor);
-        visited[id] = true;
+        visited[ptr] = true;
       }
     }
   }
@@ -108,15 +137,18 @@ inline point_t find_path(const point_t& from,
 {
   point_t next_position;
 
-  node_t f = {from.x, from.y, nullptr};
-  node_t t = {to.x, to.y, nullptr};
+  node_t f = {from.x, from.y};
+  node_t t = {to.x, to.y};
   std::vector<node_t> full_path = BFS(f, t, map, w, h);
 
-  LOG_I << "PATH(" << full_path.size() << "): ";
-  for (const auto& I : full_path) {
-    LOG_I << "[" << I.x << "," << I.y << "] -> ";
+  const size_t size = full_path.size();
+  if (size < 2) {
+    next_position = from;
+  } else {
+    const auto& pos = full_path[size - 2];
+    next_position = {pos.x, pos.y};
   }
-  LOG_I << "END" << END_I;
 
   return next_position;
 }
+}  // namespace pathfinder

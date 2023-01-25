@@ -1,6 +1,7 @@
 #pragma once
-#include <cassert>
 #include <stddef.h>
+#include <cassert>
+
 
 template <class T>
 struct node_t
