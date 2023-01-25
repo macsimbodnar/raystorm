@@ -480,7 +480,6 @@ private:
       const int x = floor_f32_to_i32(vertical_intersection_X) / TILE_SIZE;
       const int y = floor_f32_to_i32(vertical_intersection_Y) / TILE_SIZE;
 
-
       assert(x >= 0);
       assert(y >= 0);
       assert(y < map_h);
@@ -562,7 +561,7 @@ private:
           break;
         }
 
-        const char tile_id = game_map[y][x];
+        const char tile_id = game_map[y - 1][x];
         if (tile_id != 0) { horizontal_hit = true; }
       } else {
         // Down
@@ -1401,7 +1400,7 @@ private:
         assert(x < map_w);
 
         if (facing_up) {
-          // Right
+          // Up
           assert(y - 1 < map_h);
           const char tile_id = game_map[y - 1][x];
           if (tile_id != 0) {
@@ -1409,7 +1408,7 @@ private:
             horizontal_tile_id = tile_id;
           }
         } else {
-          // Left
+          // Down
           assert(y < map_h);
           const char tile_id = game_map[y][x];
           if (tile_id != 0) {
