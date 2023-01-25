@@ -1,6 +1,6 @@
 raystorm
 raystorm_sdl
-.vscode/settings.json
+.vscode
 *.o
 new/raystorm.dSYM/Contents/Info.plist
 ext/
