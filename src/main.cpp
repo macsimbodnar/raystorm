@@ -181,6 +181,7 @@ private:
   {
     animation_t animation;
     std::string sound;
+    // TODO: Make sound part of the animation
   };
 
   std::map<std::string, animation_and_sound_t> animations;
@@ -230,12 +231,10 @@ public:
     // If we are not in animation just return
     if (!in_animation()) { return; }
 
-    animations[current_animation].animation.animate();
-    if (!animations[current_animation].animation.is_animation_running()) {
-      // Set the default sprite to the last frame
-      default_sprite = animations.at(current_animation).animation.sprite();
-      current_animation.clear();
-    }
+    auto& animation = animations[current_animation].animation;
+    animation.animate();
+
+    if (!animation.is_animation_running()) { current_animation.clear(); }
   }
 
   inline const std::string& animation_sound(const std::string& animation_name)
@@ -249,7 +248,12 @@ public:
     return animations.at(current_animation).animation.sprite();
   }
 
-  inline bool in_animation() const { return !current_animation.empty(); }
+  inline bool in_animation() const
+  {
+    if (current_animation.empty()) { return false; }
+
+    return animations.at(current_animation).animation.is_animation_running();
+  }
 };
 
 
@@ -386,6 +390,7 @@ struct drawable_t
 
 struct weapon_t
 {
+  std::string default_sprite;
   animation_t animation;
   std::string sound_name;
   float damage;
@@ -727,7 +732,7 @@ private:
     }
 
     // Fire and reload animation
-    if (weapon.animation.is_animation_running()) { weapon.animation.animate(); }
+    weapon.animation.animate();
   }
 
 
@@ -815,6 +820,7 @@ private:
 
     sounds["shotgun"] = load_sound("assets/sound/shotgun.wav");
 
+    weapon.default_sprite = "shotgun_0";
     weapon.animation = {{"shotgun_0", "shotgun_1", "shotgun_2", "shotgun_3",
                          "shotgun_4", "shotgun_5"},
                         1000 / 12,
@@ -882,9 +888,9 @@ private:
                       7.0f * TILE_SIZE + TILE_SIZE / 2, 1.5f, .3f,
                       "soldier_default", "soldier_death_8");
 
-    NPCs.back().add_animation(npc_t::ATTACK,
-                              {"soldier_attack_0", "soldier_attack_1"},
-                              ANIMATION_DT, "soldier_attack");
+    NPCs.back().add_animation(
+        npc_t::ATTACK, {"soldier_attack_0", "soldier_attack_1"}, ANIMATION_DT,
+        "soldier_attack", animation_t::LOOP);
 
     NPCs.back().add_animation(
         npc_t::DEATH,
@@ -906,7 +912,7 @@ private:
     NPCs.back().add_animation(npc_t::WALK,
                               {"soldier_walk_0", "soldier_walk_1",
                                "soldier_walk_2", "soldier_walk_3"},
-                              ANIMATION_DT, "");
+                              ANIMATION_DT, "", animation_t::LOOP);
 
     NPCs.back().start_animation(npc_t::IDLE);
 
@@ -988,9 +994,6 @@ private:
   {
     // Fire player animation
     if (pulled_trigger) {
-      // Start the sound
-      play_sound(sounds[weapon.sound_name]);
-
       // Start the animation
       weapon.animation.start_animation();
     }
@@ -1032,14 +1035,18 @@ private:
         // We attack the player
 
         if ((NPC.in_animation() &&
-             NPC.last_running_animation != npc_t::ATTACK) ||
+             NPC.last_running_animation != npc_t::ATTACK &&
+             NPC.last_running_animation != npc_t::PAIN) ||
             !NPC.in_animation()) {
-          play_sound(sounds[NPC.animation_sound(npc_t::ATTACK)]);
           NPC.start_animation(npc_t::ATTACK);
         }
 
         // Set the tracking mode to false since we are in attack mode
         NPC.in_tracking_mode = false;
+      } else {
+        if (NPC.in_animation() && NPC.last_running_animation == npc_t::ATTACK) {
+          NPC.stop_animation();
+        }
       }
 
       /*------ Move the NPC                      ------*/
@@ -1112,7 +1119,6 @@ private:
         if (is_in_front) {
           if (distance < NPC.size / 2) {
             // We hit the npc
-            play_sound(sounds[NPC.animation_sound(npc_t::PAIN)]);
             NPC.start_animation(npc_t::PAIN);
             NPC.health -= weapon.damage;
           }
@@ -1646,7 +1652,15 @@ private:
 
   void draw_weapon()
   {
-    const texture_t& texture = sprites[weapon.animation.sprite()];
+    std::string texture_name;
+
+    if (weapon.animation.is_animation_running()) {
+      texture_name = weapon.animation.sprite();
+    } else {
+      texture_name = weapon.default_sprite;
+    }
+
+    const texture_t& texture = sprites[texture_name];
 
     const int w = texture.w / 3;
     const int h = texture.h / 3;
