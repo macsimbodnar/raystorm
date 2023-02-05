@@ -127,6 +127,7 @@ public:
   inline void start_animation()
   {
     timer.start();
+    current_animation_id = 0;
     running = true;
   }
 
@@ -160,7 +161,7 @@ public:
           if (new_animation_id >= num_frames) {
             running = false;
             timer.stop();
-            current_animation_id = 0;
+            // We keep the last animation id
           } else {
             current_animation_id = new_animation_id;
           }
@@ -226,8 +227,13 @@ public:
 
   inline void animate()
   {
+    // If we are not in animation just return
+    if (!in_animation()) { return; }
+
     animations[current_animation].animation.animate();
     if (!animations[current_animation].animation.is_animation_running()) {
+      // Set the default sprite to the last frame
+      default_sprite = animations.at(current_animation).animation.sprite();
       current_animation.clear();
     }
   }
@@ -285,17 +291,17 @@ public:
   };
 
 
+  const float perception_distance;
   const float attack_distance;
-  const float speed;
-  const float size;
-  float health;
   const float attack_damage;
   const float accuracy;
-  const float perception_distance;
+  const float speed;
+  const float size;
   bool alive;
+  float health;
+  float angle_to_player;  // Angle fo the vector pointing from NPC to the player
   bool see_the_player;
   bool in_tracking_mode;
-  float angle_to_player;  // Angle fo the vector pointing from NPC to the player
   bool perceiving_the_player;
   std::string death_sprite;
   animation_type_t last_running_animation;
@@ -308,17 +314,17 @@ public:
         const std::string& sprite,
         const std::string& _death_sprite)
       : base_actor_t({x, y}, scale, height_shift, sprite),
+        perception_distance(TILE_SIZE * 6),
         attack_distance(rand_between(3, 6)),
-        speed(PLAYER_SPEED / 4.0f),
-        size(.5f),
-        health(100),
         attack_damage(10),
         accuracy(0.15f),
-        perception_distance(TILE_SIZE * 6),
+        speed(PLAYER_SPEED / 4.0f),
+        size(.5f),
         alive(true),
+        health(100),
+        angle_to_player(.0f),
         see_the_player(false),
         in_tracking_mode(false),
-        angle_to_player(.0f),
         perceiving_the_player(false),
         death_sprite(_death_sprite),
         last_running_animation(IDLE)
@@ -993,6 +999,17 @@ private:
   {
     const point_f32_t& player_pos = player.position;
 
+    // Create a copy of the game map that have NPC as a non empty tile
+    // TODO: Do this in a more efficient way
+    std::vector<std::vector<char>> tmp_game_map = game_map;
+
+    for (auto& NPC : NPCs) {
+      if (!NPC.alive) { continue; }
+
+      const point_t tile = pos_to_tile(NPC.position);
+      tmp_game_map[tile.y][tile.y] = 69;
+    }
+
     for (auto& NPC : NPCs) {
       // If not alive skip
       if (!NPC.alive) { continue; }
@@ -1021,6 +1038,20 @@ private:
       NPC.in_tracking_mode = NPC.perceiving_the_player &&
                              (NPC.see_the_player || NPC.in_tracking_mode);
 
+      if (NPC.see_the_player && distance < NPC.attack_distance) {
+        // We attack the player
+
+        if ((NPC.in_animation() &&
+             NPC.last_running_animation != npc_t::ATTACK) ||
+            !NPC.in_animation()) {
+          play_sound(sounds[NPC.animation_sound(npc_t::ATTACK)]);
+          NPC.start_animation(npc_t::ATTACK);
+        }
+
+        // Set the tracking mode to false since we are in attack mode
+        NPC.in_tracking_mode = false;
+      }
+
       /*------ Move the NPC                      ------*/
       if (NPC.in_tracking_mode) {
         /**
@@ -1038,7 +1069,7 @@ private:
 
           // Find the path
           const point_t next_tile = pathfinder::find_path(
-              npc_pos, player_tile_position, game_map, map_w, map_h);
+              npc_pos, player_tile_position, tmp_game_map, map_w, map_h);
 
           // Move the NPC to the center of the next tile
           const float half_tile_size = TILE_SIZE / 2.0f;
@@ -1096,31 +1127,6 @@ private:
         // calculate if the npc is in front or back of the player
         const float angle_between = atan2_f32(y_diff, x_diff);
         const float angle_difference = abs_f32(angle_between - player.angle);
-        const bool is_in_front = angle_difference > P2 ? false : true;
-
-        if (is_in_front) {
-          if (distance < NPC.size / 2) {
-            // We hit the npc
-            play_sound(sounds[NPC.animation_sound(npc_t::PAIN)]);
-            NPC.start_animation(npc_t::PAIN);
-            NPC.health -= weapon.damage;
-          }
-
-          // Check if npc is death
-          if (NPC.health <= .0f) {
-            NPC.alive = false;
-            NPC.start_animation(npc_t::DEATH);
-            NPC.default_sprite = NPC.death_sprite;
-          }
-        }
-      }
-
-
-      /*------ Check if NPC is hit by the player ------*/
-      if (NPC.see_the_player && pulled_trigger) {
-        // calculate if the npc is in front or back of the player
-        const float angle_difference =
-            abs_f32(player.angle - NPC.angle_to_player);
         const bool is_in_front = angle_difference > P2 ? false : true;
 
         if (is_in_front) {
