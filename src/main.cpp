@@ -88,11 +88,11 @@ struct player_t
 };
 
 
-static int rand_between(const int min, const int max)
-{
-  int rand_num = (rand() % (max - min + 1)) + min;
-  return rand_num;
-}
+// static int rand_between(const int min, const int max)
+// {
+//   int rand_num = (rand() % (max - min + 1)) + min;
+//   return rand_num;
+// }
 
 
 class animation_t
@@ -111,9 +111,25 @@ private:
   uint64_t timer_th;
   bool running;
   type_t type;
+  std::string sound;
+  size_t do_animation_call_counter = 0;
+  bool just_started;
 
 public:
   animation_t() {}
+  animation_t(const std::vector<std::string>& _frames,
+              const uint64_t _timer_th,
+              const std::string& _sound,
+              const type_t _type = SINGLE)
+      : frames(_frames),
+        current_animation_id(0),
+        timer_th(_timer_th),
+        running(false),
+        type(_type),
+        sound(_sound),
+        do_animation_call_counter(0),
+        just_started(false)
+  {}
   animation_t(const std::vector<std::string>& _frames,
               const uint64_t _timer_th,
               const type_t _type = SINGLE)
@@ -121,7 +137,9 @@ public:
         current_animation_id(0),
         timer_th(_timer_th),
         running(false),
-        type(_type)
+        type(_type),
+        do_animation_call_counter(0),
+        just_started(false)
   {}
 
   inline void start_animation()
@@ -129,6 +147,8 @@ public:
     timer.start();
     current_animation_id = 0;
     running = true;
+    just_started = true;
+    do_animation_call_counter = 0;
   }
 
   inline void stop_animation()
@@ -136,6 +156,8 @@ public:
     running = false;
     timer.stop();
     current_animation_id = 0;
+    just_started = false;
+    do_animation_call_counter = 0;
   }
 
   inline bool is_animation_running() const { return running; }
@@ -147,6 +169,8 @@ public:
 
   inline void animate()
   {
+    ++do_animation_call_counter;
+
     if (running && timer.get_ticks() >= timer_th) {
       timer.restart();
       const size_t new_animation_id = current_animation_id + 1;
@@ -155,6 +179,8 @@ public:
       switch (type) {
         case LOOP:
           current_animation_id = new_animation_id % num_frames;
+
+          if (current_animation_id == 0) { do_animation_call_counter = 0; }
           break;
 
         case SINGLE:
@@ -171,21 +197,26 @@ public:
       timer.restart();
     }
   }
+
+  inline bool should_play_sound() const
+  {
+    if (!sound.empty() && do_animation_call_counter == 0 && running) {
+      return true;
+    }
+
+    return false;
+  }
+
+  inline const std::string& get_sound() const { return sound; }
 };
 
 
 class base_actor_t
 {
 private:
-  struct animation_and_sound_t
-  {
-    animation_t animation;
-    std::string sound;
-    // TODO: Make sound part of the animation
-  };
-
-  std::map<std::string, animation_and_sound_t> animations;
+  std::map<std::string, animation_t> animations;
   std::string current_animation;
+  std::string empty_string;
 
 public:
   point_f32_t position;
@@ -210,19 +241,19 @@ public:
                             const animation_t::type_t type,
                             const std::string& sound = "")
   {
-    animations[animation_name] = {{frames, timer_th, type}, sound};
+    animations[animation_name] = {frames, timer_th, sound, type};
   }
 
   inline void start_animation(const std::string& animation_name)
   {
     stop_animation();
     current_animation = animation_name;
-    animations[current_animation].animation.start_animation();
+    animations[current_animation].start_animation();
   }
 
   inline void stop_animation()
   {
-    animations[current_animation].animation.start_animation();
+    animations[current_animation].start_animation();
     current_animation.clear();
   }
 
@@ -231,28 +262,45 @@ public:
     // If we are not in animation just return
     if (!in_animation()) { return; }
 
-    auto& animation = animations[current_animation].animation;
+    auto& animation = animations[current_animation];
     animation.animate();
 
     if (!animation.is_animation_running()) { current_animation.clear(); }
   }
 
-  inline const std::string& animation_sound(const std::string& animation_name)
+  inline const std::string& animation_sound(
+      const std::string& animation_name) const
   {
-    return animations[animation_name].sound;
+    return animations.at(animation_name).get_sound();
   }
 
   inline const std::string& sprite() const
   {
     if (current_animation.empty()) { return default_sprite; }
-    return animations.at(current_animation).animation.sprite();
+    return animations.at(current_animation).sprite();
+  }
+
+  inline bool should_play_sound() const
+  {
+    if (!current_animation.empty()) {
+      return animations.at(current_animation).should_play_sound();
+    }
+
+    return false;
+  }
+
+  inline const std::string& sound() const
+  {
+    if (current_animation.empty()) { return empty_string; }
+
+    return animations.at(current_animation).get_sound();
   }
 
   inline bool in_animation() const
   {
     if (current_animation.empty()) { return false; }
 
-    return animations.at(current_animation).animation.is_animation_running();
+    return animations.at(current_animation).is_animation_running();
   }
 };
 
@@ -319,11 +367,12 @@ public:
         const std::string& _death_sprite)
       : base_actor_t({x, y}, scale, height_shift, sprite),
         perception_distance(TILE_SIZE * 6),
-        attack_distance(rand_between(3, 6)),
-        attack_damage(10),
+        // attack_distance(rand_between(3, 6)),
+        attack_distance(6.0f),
+        attack_damage(10.0f),
         accuracy(0.15f),
         speed(PLAYER_SPEED / 4.0f),
-        size(.5f),
+        size(.7f),
         alive(true),
         health(100),
         angle_to_player(.0f),
@@ -392,7 +441,6 @@ struct weapon_t
 {
   std::string default_sprite;
   animation_t animation;
-  std::string sound_name;
   float damage;
 };
 
@@ -716,6 +764,30 @@ private:
     }
   }
 
+  void play_sounds()
+  {
+    // Actors
+    for (auto& A : animated_actors) {
+      const auto& sound_to_play = A.sound();
+      if (A.should_play_sound() && !sound_to_play.empty()) {
+        play_sound(sounds[sound_to_play]);
+      }
+    }
+
+    // NPCs
+    for (auto& NPC : NPCs) {
+      const auto& sound_to_play = NPC.sound();
+      if (NPC.should_play_sound() && !sound_to_play.empty()) {
+        play_sound(sounds[sound_to_play]);
+      }
+    }
+
+    // Weapon fire sound
+    const auto& sound_to_play = weapon.animation.get_sound();
+    if (weapon.animation.should_play_sound() && !sound_to_play.empty()) {
+      play_sound(sounds[sound_to_play]);
+    }
+  }
 
   void animate()
   {
@@ -824,9 +896,8 @@ private:
     weapon.animation = {{"shotgun_0", "shotgun_1", "shotgun_2", "shotgun_3",
                          "shotgun_4", "shotgun_5"},
                         1000 / 12,
+                        "shotgun",
                         animation_t::SINGLE};
-
-    weapon.sound_name = "shotgun";
     weapon.damage = 50.1f;
 
     // NPCs
@@ -1701,6 +1772,7 @@ private:
     update_NPCs();
 
     /*------ Execute all the animation  ------*/
+    play_sounds();
     animate();
 
     /*------ Draw                       ------*/
