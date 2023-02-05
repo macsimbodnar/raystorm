@@ -418,6 +418,7 @@ private:
   int map_w;
   int map_h;
   std::vector<std::vector<char>> game_map;
+  std::vector<std::vector<char>> populated_game_map;
 
   std::map<int, texture_t> textures;
   std::map<std::string, texture_t> sprites;
@@ -999,17 +1000,6 @@ private:
   {
     const point_f32_t& player_pos = player.position;
 
-    // Create a copy of the game map that have NPC as a non empty tile
-    // TODO: Do this in a more efficient way
-    std::vector<std::vector<char>> tmp_game_map = game_map;
-
-    for (auto& NPC : NPCs) {
-      if (!NPC.alive) { continue; }
-
-      const point_t tile = pos_to_tile(NPC.position);
-      tmp_game_map[tile.y][tile.y] = 69;
-    }
-
     for (auto& NPC : NPCs) {
       // If not alive skip
       if (!NPC.alive) { continue; }
@@ -1054,36 +1044,26 @@ private:
 
       /*------ Move the NPC                      ------*/
       if (NPC.in_tracking_mode) {
-        /**
-         * If the player is visible then the NPC walk directly to the player
-         * else he will search for the path
-         */
+        // Get the next position
+        const point_t player_tile_position = pos_to_tile(player_pos);
+        const point_t npc_pos = pos_to_tile(NPC.position);
 
-        float angle_to_use;
-        if (NPC.see_the_player) {
-          angle_to_use = NPC.angle_to_player;
-        } else {
-          // Get the next position
-          const point_t player_tile_position = pos_to_tile(player_pos);
-          const point_t npc_pos = pos_to_tile(NPC.position);
+        // Find the path
+        const point_t next_tile = pathfinder::find_path(
+            npc_pos, player_tile_position, populated_game_map, map_w, map_h);
 
-          // Find the path
-          const point_t next_tile = pathfinder::find_path(
-              npc_pos, player_tile_position, tmp_game_map, map_w, map_h);
+        // Move the NPC to the center of the next tile
+        const float half_tile_size = TILE_SIZE / 2.0f;
+        const point_f32_t next_pos = {
+            (next_tile.x * TILE_SIZE) + half_tile_size,
+            (next_tile.y * TILE_SIZE) + half_tile_size,
+        };
 
-          // Move the NPC to the center of the next tile
-          const float half_tile_size = TILE_SIZE / 2.0f;
-          const point_f32_t next_pos = {
-              (next_tile.x * TILE_SIZE) + half_tile_size,
-              (next_tile.y * TILE_SIZE) + half_tile_size,
-          };
+        // Get the angle
+        const float NPC_to_next_pos_angle =
+            atan2_f32(next_pos.y - NPC.position.y, next_pos.x - NPC.position.x);
 
-          // Get the angle
-          const float NPC_to_next_pos_angle = atan2_f32(
-              next_pos.y - NPC.position.y, next_pos.x - NPC.position.x);
-
-          angle_to_use = NPC_to_next_pos_angle;
-        }
+        const float angle_to_use = NPC_to_next_pos_angle;
 
         // Calculate the next NPC position
         const float npc_speed = NPC.speed * delta_time();
@@ -1185,7 +1165,7 @@ private:
     const pixel_t white = 0xFFFFFFFF;
     for (int i = 0; i < map_h; ++i) {
       for (int j = 0; j < map_w; ++j) {
-        if (game_map[i][j] != 0) {
+        if (populated_game_map[i][j] != 0) {
           const rect_t rect = {j * PIXELS_IN_TILE, i * PIXELS_IN_TILE,
                                PIXELS_IN_TILE, PIXELS_IN_TILE};
           draw_rect_outline(rect, white);
@@ -1676,9 +1656,27 @@ private:
   }
 
 
+  void generate_populated_game_map()
+  {
+    // Create a copy of the game map that have NPC as a non empty tile
+    // TODO: Do this in a more efficient way
+    populated_game_map.clear();
+    populated_game_map = game_map;
+
+    for (auto& NPC : NPCs) {
+      if (!NPC.alive) { continue; }
+
+      const point_t tile = pos_to_tile(NPC.position);
+      populated_game_map[tile.y][tile.x] = 69;
+    }
+  }
+
+
   void on_update(void*) override
   {
     to_draw.clear();
+
+    generate_populated_game_map();
 
     /*------ Check events               ------*/
     check_events();
