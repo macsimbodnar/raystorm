@@ -374,9 +374,9 @@ public:
         const std::string& sprite,
         const std::string& _death_sprite)
       : base_actor_t({x, y}, scale, height_shift, sprite),
-        perception_distance(TILE_SIZE * 6),
+        perception_distance(TILE_SIZE * 8.0f),
         // attack_distance(rand_between(3, 6)),
-        attack_distance(6.0f),
+        attack_distance(TILE_SIZE * 3.0f),
         attack_damage(10.0f),
         accuracy(0.15f),
         speed(PLAYER_SPEED / 4.0f),
@@ -687,7 +687,13 @@ private:
       test_pos.y = to.y - half_body;
     }
 
+    const point_t from_tile = pos_to_tile(from);
     const point_t dest_tile = pos_to_tile(test_pos);
+
+    // We exclude the itself tile.
+    if (from_tile.x == dest_tile.x && from_tile.y == dest_tile.y) {
+      return destination_pos;
+    }
 
     assert(dest_tile.x >= 0);
     assert(dest_tile.x < map_w);
@@ -1278,17 +1284,19 @@ private:
       const int y = floor_f32_to_i32(pos.y / TILE_SIZE * PIXELS_IN_TILE);
 
       // Draw line if the NPC see the player
-      if (A.see_the_player) {
+      if (A.see_the_player && A.alive) {
         draw_line({x, y}, {player_x, player_y}, 0xFF5E05FF);
+
+        // Draw the angle to the player just in case
+        const point_t a = {x, y};
+        const point_t b = {
+            round_f32_to_i32(a.x + PIXELS_IN_TILE * cos_f32(A.angle_to_player)),
+            round_f32_to_i32(a.y +
+                             PIXELS_IN_TILE * sin_f32(A.angle_to_player))};
+
+        draw_line(a, b, 0x0000FFFF);
       }
 
-      // Draw the angle to the player just in case
-      const point_t a = {x, y};
-      const point_t b = {
-          round_f32_to_i32(a.x + PIXELS_IN_TILE * cos_f32(A.angle_to_player)),
-          round_f32_to_i32(a.y + PIXELS_IN_TILE * sin_f32(A.angle_to_player))};
-
-      draw_line(a, b, 0x0000FFFF);
 
       // Draw the body
       const int npc_size =
