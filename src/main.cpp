@@ -1017,6 +1017,7 @@ private:
 
     // Start things
     // music_do(music_t::PLAY, musics["main"]);
+    set_master_volume(0.1f);
   }
 
 
