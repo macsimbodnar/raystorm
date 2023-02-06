@@ -1116,6 +1116,8 @@ private:
       NPC.in_tracking_mode = NPC.perceiving_the_player &&
                              (NPC.see_the_player || NPC.in_tracking_mode);
 
+      bool attack_mode = false;
+
       if (NPC.see_the_player && distance < NPC.attack_distance) {
         // We attack the player
 
@@ -1126,8 +1128,7 @@ private:
           NPC.start_animation(npc_t::ATTACK);
         }
 
-        // Set the tracking mode to false since we are in attack mode
-        NPC.in_tracking_mode = false;
+        attack_mode = true;
       } else {
         if (NPC.in_animation() && NPC.last_running_animation == npc_t::ATTACK) {
           NPC.stop_animation();
@@ -1135,7 +1136,7 @@ private:
       }
 
       /*------ Move the NPC                      ------*/
-      if (NPC.in_tracking_mode) {
+      if (NPC.in_tracking_mode && !attack_mode) {
         // Get the next position
         const point_t player_tile_position = pos_to_tile(player_pos);
         const point_t npc_pos = pos_to_tile(NPC.position);

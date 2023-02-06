@@ -62,8 +62,9 @@ inline std::vector<std::shared_ptr<node_t>> get_neighbors(
    * [-1, 1][ 0, 1][ 1, 1]
    *
    */
-  static const std::array<point_t, 8> directions = {
-      {{0, -1}, {-1, 0}, {1, 0}, {0, 1}, {-1, -1}, {1, -1}, {-1, 1}, {1, 1}}};
+  static const std::array<point_t, 4> directions = {
+      {{0, -1}, {-1, 0}, {1, 0}, {0, 1}}};
+      // {{0, -1}, {-1, 0}, {1, 0}, {0, 1}, {-1, -1}, {1, -1}, {-1, 1}, {1, 1}}};
 
   for (const auto& I : directions) {
     const int x = node.get()->x + I.x;
