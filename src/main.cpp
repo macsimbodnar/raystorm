@@ -8,6 +8,14 @@
 #include "math.hpp"
 #include "pathfinder.hpp"
 
+/**
+ * TODO
+ *
+ * - Player does not follow me (maybe because themself position prevents from
+ * moving)
+ *
+ */
+
 static bool reset_game = false;
 
 constexpr float TILE_SIZE = 2.0f;    // In meters
@@ -28,7 +36,7 @@ constexpr float DARKNESS_MASK_SLOPE = 1.0f * 255.0f / 80.0f;
 constexpr int ANIMATION_DT = 1000 / 6;  // In ms
 
 // clang-format off
-const std::vector<std::vector<char>> MAP = {
+const std::vector<std::vector<char>> MAP = {//20 
     {2,2,2,2,5,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -37,7 +45,7 @@ const std::vector<std::vector<char>> MAP = {
     {1,0,0,0,0,0,2,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,0,0,0,2,0,2,0,2,0,2,0,0,0,0,1},
     {1,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,3,0,0,0,2,0,0,0,0,0,2,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,0,0,0,2,0,2,0,2,0,2,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,3,0,0,0,2,0,2,0,2,0,2,0,0,0,0,1},//8
     {1,0,0,0,0,0,4,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,2,2,2,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,5,0,0,0,0,0,0,0,1,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
@@ -543,17 +551,17 @@ private:
 
       if (facing_right) {  // Right
 
+        if (x > B_tile.x) { break; }
+
         const char tile_id = game_map[y][x];
         if (tile_id != 0) { return false; }
 
-        if (x >= B_tile.x) { break; }
-
       } else {  // Left
+
+        if (x <= B_tile.x) { break; }
 
         const char tile_id = game_map[y][x - 1];
         if (tile_id != 0) { return false; }
-
-        if (x <= B_tile.x) { break; }
       }
 
       vertical_intersection_X += vertical_dx;
@@ -592,17 +600,17 @@ private:
 
       if (facing_up) {  // Up
 
+        if (y <= B_tile.y) { break; }
+
         const char tile_id = game_map[y - 1][x];
         if (tile_id != 0) { return false; }
 
-        if (y <= B_tile.y) { break; }
-
       } else {  // Down
+
+        if (y > B_tile.y) { break; }
 
         const char tile_id = game_map[y][x];
         if (tile_id != 0) { return false; }
-
-        if (y >= B_tile.y) { break; }
       }
 
       horizontal_intersection_X += horizontal_dx;
