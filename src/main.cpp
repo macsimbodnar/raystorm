@@ -496,6 +496,8 @@ private:
   std::vector<drawable_t> to_draw_floor;
   std::vector<drawable_t> to_draw_ceiling;
 
+  bool victory;
+  bool game_over;
   bool should_draw_map;
   int map_w;
   int map_h;
@@ -504,6 +506,7 @@ private:
 
   std::map<int, texture_t> textures;
   std::map<std::string, texture_t> sprites;
+  std::map<int, texture_t> digits;
 
   std::map<std::string, music_t> musics;
   std::map<std::string, sound_t> sounds;
@@ -522,6 +525,8 @@ public:
         delta_angle(FOV / TO_F32(num_of_rays)),
         screen_dist(_screen_w / 2.0f / tan_f32(HALF_FOV)),
         ray_column_width(screen_w / num_of_rays),
+        victory(false),
+        game_over(false),
         should_draw_map(false)
   {}
 
@@ -788,6 +793,18 @@ private:
       should_draw_map = false;
     }
 
+    // Game over
+    if (player.health <= .0f) { game_over = true; }
+
+    // Win game
+    victory = true;
+    for (const auto& NPC : NPCs) {
+      if (NPC.alive) {
+        victory = false;
+        break;
+      }
+    }
+
     // Weapon
 
     // Reset the pulled trigger and set it in case
@@ -861,12 +878,18 @@ private:
     // Hide the mouse
     mouse_set_FPS_mode(true);
 
+    victory = false;
+    game_over = false;
+    should_draw_map = false;
     to_draw.clear();
     to_draw_floor.clear();
     to_draw_ceiling.clear();
     unanimated_actors.clear();
     animated_actors.clear();
     NPCs.clear();
+    textures.clear();
+    sprites.clear();
+    digits.clear();
 
     // Reserve the memory for the vectors
     to_draw.reserve(screen_w * 2);
@@ -889,6 +912,18 @@ private:
     textures[4] = load_image("assets/textures/4.png");
     textures[5] = load_image("assets/textures/5.png");
     textures[-1] = load_image("assets/textures/sky.png");
+
+    // Load digits
+    digits[0] = load_image("assets/textures/digits/0.png");
+    digits[1] = load_image("assets/textures/digits/1.png");
+    digits[2] = load_image("assets/textures/digits/2.png");
+    digits[3] = load_image("assets/textures/digits/3.png");
+    digits[4] = load_image("assets/textures/digits/4.png");
+    digits[5] = load_image("assets/textures/digits/5.png");
+    digits[6] = load_image("assets/textures/digits/6.png");
+    digits[7] = load_image("assets/textures/digits/7.png");
+    digits[8] = load_image("assets/textures/digits/8.png");
+    digits[9] = load_image("assets/textures/digits/9.png");
 
     // Load static sprites
     sprites["candelabrum"] =
@@ -929,6 +964,10 @@ private:
                                           "candelabrum_r2", "candelabrum_r3"},
                                          ANIMATION_DT, animation_t::LOOP);
     animated_actors.back().start_animation("default_animation");
+
+    // Game over overlay
+    sprites["game_over"] = load_image("assets/textures/game_over.png");
+    sprites["win"] = load_image("assets/textures/win.png");
 
     // Pain animation
     sprites["blood_screen"] = load_image("assets/textures/blood_screen.png");
@@ -1057,7 +1096,9 @@ private:
     player.pain_animation = {{"blood_screen"}, ANIMATION_DT, "player_pain"};
 
     // Start things
-    // music_do(music_t::PLAY, musics["main"]);
+    play_music(musics["main"]);
+
+    // Volume
     set_master_volume(0.1f);
   }
 
@@ -1834,6 +1875,51 @@ private:
   }
 
 
+  void draw_game_over()
+  {
+    const auto& texture = sprites["game_over"];
+    const rect_t rect = {0, 0, screen_w, screen_h};
+    draw_texture(texture, rect);
+  }
+
+
+  void draw_victory()
+  {
+    const auto& texture = sprites["win"];
+    const rect_t rect = {0, 0, screen_w, screen_h};
+    draw_texture(texture, rect);
+  }
+
+
+  void draw_overlay()
+  {
+    draw_pain();
+
+    // Draw health
+    int health = floor_f32_to_i32(player.health);
+    int digit;
+    int digit_counter = 2;
+    while (health > 0) {
+      digit = health % 10;
+      health /= 10;
+
+      const auto& texture = digits[digit];
+      const int w = texture.w;
+      const int h = texture.h;
+      const rect_t rect = {w * digit_counter, 10, w, h};
+      draw_texture(texture, rect);
+      --digit_counter;
+    }
+
+    // Draw victory or game over
+    if (victory) {
+      draw_victory();
+    } else if (game_over) {
+      draw_game_over();
+    }
+  }
+
+
   void on_update(void*) override
   {
     to_draw.clear();
@@ -1843,14 +1929,17 @@ private:
     /*------ Check events               ------*/
     check_events();
 
-    /*------ Update the game            ------*/
-    update_player();
-    update_weapon();
-    update_NPCs();
 
-    /*------ Execute all the animation  ------*/
-    play_sounds();
-    animate();
+    if (!game_over) {
+      /*------ Update the game            ------*/
+      update_player();
+      update_weapon();
+      update_NPCs();
+
+      /*------ Execute all the animation  ------*/
+      play_sounds();
+      animate();
+    }
 
     /*------ Draw                       ------*/
 
@@ -1863,8 +1952,7 @@ private:
     draw_drawables();
     draw_weapon();
 
-    // Draw pain overlay
-    draw_pain();
+    draw_overlay();
 
     if (should_draw_map) {
       draw_2d_map();
