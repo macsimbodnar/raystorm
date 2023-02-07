@@ -25,7 +25,7 @@ constexpr float PLAYER_SIZE = 0.5f;  // In meters
 constexpr float PLAYER_SPEED = 0.00000001f;  // In meters per second
 constexpr float PLAYER_SPEED_BOOSTED = PLAYER_SPEED * 2.0f;
 constexpr float PLAYER_ROTATION_SPEED = 0.0000000025f;
-constexpr float MOUSE_SENSITIVITY = 0.0000000009f;
+constexpr float MOUSE_SENSITIVITY = 0.0000000008f;
 
 constexpr float FOV = PI / 3.0f;
 constexpr float HALF_FOV = FOV / 2.0f;
@@ -88,19 +88,11 @@ bool operator!=(const point_f32_t& lhs, const point_f32_t& rhs)
 }
 
 
-struct player_t
+static int rand_between(const int min, const int max)
 {
-  point_f32_t position;
-  float angle;
-  bool boost = false;
-};
-
-
-// static int rand_between(const int min, const int max)
-// {
-//   int rand_num = (rand() % (max - min + 1)) + min;
-//   return rand_num;
-// }
+  int rand_num = (rand() % (max - min + 1)) + min;
+  return rand_num;
+}
 
 
 class animation_t
@@ -357,6 +349,7 @@ public:
   const float accuracy;
   const float speed;
   const float size;
+  const uint64_t fire_rate_ms;
   bool alive;
   float health;
   float angle_to_player;  // Angle fo the vector pointing from NPC to the player
@@ -366,6 +359,7 @@ public:
   std::string death_sprite;
   animation_type_t last_running_animation;
 
+  simple_timer fire_timer;
 
   npc_t(const float x,
         const float y,
@@ -378,9 +372,10 @@ public:
         // attack_distance(rand_between(3, 6)),
         attack_distance(TILE_SIZE * 3.0f),
         attack_damage(10.0f),
-        accuracy(0.15f),
+        accuracy(0.5f),
         speed(PLAYER_SPEED / 4.0f),
         size(.7f),
+        fire_rate_ms(1000),
         alive(true),
         health(100),
         angle_to_player(.0f),
@@ -406,11 +401,27 @@ public:
   {
     last_running_animation = type;
     base_actor_t::start_animation(std::to_string(type));
+
+    // Starting an animation stop the fire timer
+    fire_timer.stop();
   }
 
   inline const std::string& animation_sound(const animation_type_t type)
   {
     return base_actor_t::animation_sound(std::to_string(type));
+  }
+
+  inline bool fire()
+  {
+    if (!fire_timer.is_started() &&
+        !(in_animation() && last_running_animation == npc_t::PAIN)) {
+      start_animation(npc_t::ATTACK);
+      fire_timer.start();
+      return true;
+    }
+
+    if (fire_timer.get_ticks() > fire_rate_ms) { fire_timer.stop(); }
+    return false;
   }
 };
 
@@ -450,6 +461,18 @@ struct weapon_t
   std::string default_sprite;
   animation_t animation;
   float damage;
+  bool pulled_trigger;
+};
+
+
+struct player_t
+{
+  point_f32_t position;
+  float angle;
+  bool boost = false;
+  float health;
+  animation_t pain_animation;
+  weapon_t weapon;
 };
 
 
@@ -464,8 +487,6 @@ private:
   const int ray_column_width;
 
   player_t player;
-  weapon_t weapon;
-  bool pulled_trigger;
 
   std::vector<unanimated_actor_t> unanimated_actors;
   std::vector<animated_actor_t> animated_actors;
@@ -501,7 +522,6 @@ public:
         delta_angle(FOV / TO_F32(num_of_rays)),
         screen_dist(_screen_w / 2.0f / tan_f32(HALF_FOV)),
         ray_column_width(screen_w / num_of_rays),
-        pulled_trigger(false),
         should_draw_map(false)
   {}
 
@@ -771,10 +791,10 @@ private:
     // Weapon
 
     // Reset the pulled trigger and set it in case
-    pulled_trigger = false;
+    player.weapon.pulled_trigger = false;
     if ((is_key_pressed(keycap_t::SPACE) || mouse.left_button_pressed) &&
-        !weapon.animation.is_animation_running()) {
-      pulled_trigger = true;
+        !player.weapon.animation.is_animation_running()) {
+      player.weapon.pulled_trigger = true;
     }
   }
 
@@ -796,10 +816,21 @@ private:
       }
     }
 
-    // Weapon fire sound
-    const auto& sound_to_play = weapon.animation.get_sound();
-    if (weapon.animation.should_play_sound() && !sound_to_play.empty()) {
-      play_sound(sounds[sound_to_play]);
+    {
+      // Weapon fire sound
+      const auto& sound_to_play = player.weapon.animation.get_sound();
+      if (player.weapon.animation.should_play_sound() &&
+          !sound_to_play.empty()) {
+        play_sound(sounds[sound_to_play]);
+      }
+    }
+
+    {
+      // Player pain sound
+      const auto& sound_to_play = player.pain_animation.get_sound();
+      if (player.pain_animation.should_play_sound() && !sound_to_play.empty()) {
+        play_sound(sounds[sound_to_play]);
+      }
     }
   }
 
@@ -818,7 +849,10 @@ private:
     }
 
     // Fire and reload animation
-    weapon.animation.animate();
+    player.weapon.animation.animate();
+
+    // Pain animation
+    player.pain_animation.animate();
   }
 
 
@@ -896,6 +930,10 @@ private:
                                          ANIMATION_DT, animation_t::LOOP);
     animated_actors.back().start_animation("default_animation");
 
+    // Pain animation
+    sprites["blood_screen"] = load_image("assets/textures/blood_screen.png");
+    sounds["player_pain"] = load_sound("assets/sound/player_pain.wav");
+
     // Weapon
     sprites["shotgun_0"] = load_image("assets/sprites/weapon/shotgun/0.png");
     sprites["shotgun_1"] = load_image("assets/sprites/weapon/shotgun/1.png");
@@ -905,14 +943,6 @@ private:
     sprites["shotgun_5"] = load_image("assets/sprites/weapon/shotgun/5.png");
 
     sounds["shotgun"] = load_sound("assets/sound/shotgun.wav");
-
-    weapon.default_sprite = "shotgun_0";
-    weapon.animation = {{"shotgun_0", "shotgun_1", "shotgun_2", "shotgun_3",
-                         "shotgun_4", "shotgun_5"},
-                        1000 / 12,
-                        "shotgun",
-                        animation_t::SINGLE};
-    weapon.damage = 50.1f;
 
     // NPCs
     sprites["soldier_default"] = load_image("assets/sprites/npc/soldier/0.png");
@@ -1014,6 +1044,17 @@ private:
     // Init player
     player.position = {4.0f, 15.0f};
     player.angle = -P2;
+    player.health = 100.0f;
+
+    player.weapon.default_sprite = "shotgun_0";
+    player.weapon.animation = {{"shotgun_0", "shotgun_1", "shotgun_2",
+                                "shotgun_3", "shotgun_4", "shotgun_5"},
+                               1019 / 12,
+                               "shotgun",
+                               animation_t::SINGLE};
+    player.weapon.damage = 50.1f;
+
+    player.pain_animation = {{"blood_screen"}, ANIMATION_DT, "player_pain"};
 
     // Start things
     // music_do(music_t::PLAY, musics["main"]);
@@ -1079,9 +1120,9 @@ private:
   inline void update_weapon()
   {
     // Fire player animation
-    if (pulled_trigger) {
+    if (player.weapon.pulled_trigger) {
       // Start the animation
-      weapon.animation.start_animation();
+      player.weapon.animation.start_animation();
     }
   }
 
@@ -1117,22 +1158,24 @@ private:
       NPC.in_tracking_mode = NPC.perceiving_the_player &&
                              (NPC.see_the_player || NPC.in_tracking_mode);
 
-      bool attack_mode = false;
+      // Set the attack mode
+      bool attack_mode = (NPC.see_the_player && distance < NPC.attack_distance);
 
-      if (NPC.see_the_player && distance < NPC.attack_distance) {
-        // We attack the player
+      /*------ Damage the player                 ------*/
+      if (attack_mode) {
+        const bool is_firing = NPC.fire();
 
-        if ((NPC.in_animation() &&
-             NPC.last_running_animation != npc_t::ATTACK &&
-             NPC.last_running_animation != npc_t::PAIN) ||
-            !NPC.in_animation()) {
-          NPC.start_animation(npc_t::ATTACK);
-        }
+        const int rand = rand_between(0, 100);
+        const int th = static_cast<int>(100 * NPC.accuracy);
 
-        attack_mode = true;
-      } else {
-        if (NPC.in_animation() && NPC.last_running_animation == npc_t::ATTACK) {
-          NPC.stop_animation();
+        if (is_firing && rand < th) {
+          // Do the damage to the player
+          player.health -= NPC.attack_damage;
+
+          // Play the pain animation
+          if (!player.pain_animation.is_animation_running()) {
+            player.pain_animation.start_animation();
+          }
         }
       }
 
@@ -1188,7 +1231,7 @@ private:
       }
 
       /*------ Check if NPC is hit by the player ------*/
-      if (NPC.see_the_player && pulled_trigger) {
+      if (NPC.see_the_player && player.weapon.pulled_trigger) {
         // TODO: Reuse the already calculated data
         const float x_diff = NPC.position.x - player.position.x;
         const float y_diff = NPC.position.y - player.position.y;
@@ -1207,7 +1250,7 @@ private:
           if (distance < NPC.size / 2) {
             // We hit the npc
             NPC.start_animation(npc_t::PAIN);
-            NPC.health -= weapon.damage;
+            NPC.health -= player.weapon.damage;
           }
 
           // Check if npc is death
@@ -1242,6 +1285,12 @@ private:
     const texture_t angle =
         create_text("ANGLE: " + STR(player.angle), 0x00FF00FF);
     draw_texture(angle, screen_w - angle.w, 2 + fps.h + 2 + player_pos.h + 2);
+
+    // Draw player health
+    const texture_t health =
+        create_text("HEALTH: " + STR(player.health), 0x00FF00FF);
+    draw_texture(health, screen_w - health.w,
+                 2 + angle.h + 2 + player_pos.h + 2 + angle.h + 2);
   }
 
 
@@ -1743,10 +1792,10 @@ private:
   {
     std::string texture_name;
 
-    if (weapon.animation.is_animation_running()) {
-      texture_name = weapon.animation.sprite();
+    if (player.weapon.animation.is_animation_running()) {
+      texture_name = player.weapon.animation.sprite();
     } else {
-      texture_name = weapon.default_sprite;
+      texture_name = player.weapon.default_sprite;
     }
 
     const texture_t& texture = sprites[texture_name];
@@ -1771,6 +1820,16 @@ private:
 
       const point_t tile = pos_to_tile(NPC.position);
       populated_game_map[tile.y][tile.x] = 69;
+    }
+  }
+
+
+  void draw_pain()
+  {
+    if (player.pain_animation.is_animation_running()) {
+      const auto& texture = sprites[player.pain_animation.sprite()];
+      const rect_t screen = {0, 0, screen_w, screen_h};
+      draw_texture(texture, screen);
     }
   }
 
@@ -1803,6 +1862,9 @@ private:
     draw_background();
     draw_drawables();
     draw_weapon();
+
+    // Draw pain overlay
+    draw_pain();
 
     if (should_draw_map) {
       draw_2d_map();
