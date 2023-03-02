@@ -511,14 +511,11 @@ private:
   std::map<std::string, music_t> musics;
   std::map<std::string, sound_t> sounds;
 
+  font_t font;
+
 public:
   gui_t(const int _screen_w, const int _screen_h)
-      : pixello(_screen_w,
-                _screen_h,
-                "Raystorm",
-                60,
-                "assets/font/PressStart2P.ttf",
-                10),
+      : pixello(_screen_w, _screen_h, "Raystorm", 60),
         screen_w(_screen_w),
         screen_h(_screen_h),
         num_of_rays(_screen_w / WALL_CHUNK_WIDTH),
@@ -901,6 +898,9 @@ private:
 
     // Load map
     load_map(MAP);
+
+    // Load font
+    font = load_font("assets/font/PressStart2P.ttf", 10);
 
     // Load musics
     musics["main"] = load_music("assets/sound/theme.mp3");
@@ -1313,23 +1313,23 @@ private:
   void draw_fps()
   {
     // Draw FPS
-    const texture_t fps = create_text("FPS: " + STR(FPS()), 0x00FF00FF);
+    const texture_t fps = create_text("FPS: " + STR(FPS()), 0x00FF00FF, font);
     draw_texture(fps, screen_w - fps.w, 2);
 
     // Draw player position
     const texture_t player_pos = create_text(
         "X: " + STR(player.position.x) + " Y: " + STR(player.position.y),
-        0x00FF00FF);
+        0x00FF00FF, font);
     draw_texture(player_pos, screen_w - player_pos.w, 2 + fps.h + 2);
 
     // Draw player angle
     const texture_t angle =
-        create_text("ANGLE: " + STR(player.angle), 0x00FF00FF);
+        create_text("ANGLE: " + STR(player.angle), 0x00FF00FF, font);
     draw_texture(angle, screen_w - angle.w, 2 + fps.h + 2 + player_pos.h + 2);
 
     // Draw player health
     const texture_t health =
-        create_text("HEALTH: " + STR(player.health), 0x00FF00FF);
+        create_text("HEALTH: " + STR(player.health), 0x00FF00FF, font);
     draw_texture(health, screen_w - health.w,
                  2 + angle.h + 2 + player_pos.h + 2 + angle.h + 2);
   }
