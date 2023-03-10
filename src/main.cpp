@@ -1406,8 +1406,8 @@ private:
     constexpr int PIXELS_IN_TILE = 32;
 
     const pixel_t green = 0x00FF00FF;
-    const pixel_t gray = 0x555555FF;
-    const point_t tile = pos_to_tile(player.position);
+    // const pixel_t gray = 0x555555FF;
+    // const point_t tile = pos_to_tile(player.position);
     const point_t player_screen_pos = {
         round_f32_to_i32(player.position.x / TILE_SIZE * PIXELS_IN_TILE),
         round_f32_to_i32(player.position.y / TILE_SIZE * PIXELS_IN_TILE)};
